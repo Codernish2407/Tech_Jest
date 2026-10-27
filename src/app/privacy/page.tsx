@@ -21,7 +21,7 @@ export default async function Privacy() {
         </div>
       </section>
       <section className="section">
-        <div className="container">
+        <div className="container legal-content">
           <h2>Information we collect</h2>
           <p>
             When you send a project enquiry, request a quote, or message us, we collect the details you enter: your

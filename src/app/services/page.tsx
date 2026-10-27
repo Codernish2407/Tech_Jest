@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
 import { getSiteUrl } from "@/lib/site-url";
 import { ServiceMarketplace } from "@/frontend/components/service-marketplace";
-import { getServices } from "@/backend/supabase/services";
+import { getServiceCatalog } from "@/backend/supabase/services";
+import { jsonLd } from "@/lib/json-ld";
 
 // Cached like the other public pages; saving in Admin → Services refreshes it straight away.
 export const revalidate = 300;
@@ -15,13 +16,13 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function Services() {
-  const services = await getServices();
+  const { services, status } = await getServiceCatalog();
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             "@context": "https://schema.org",
             "@type": "CollectionPage",
             name: "TechJest IT Services Marketplace",
@@ -47,7 +48,7 @@ export default async function Services() {
           }),
         }}
       />
-      <ServiceMarketplace services={services} />
+      <ServiceMarketplace services={services} unavailable={status === "unavailable"} />
     </>
   );
 }

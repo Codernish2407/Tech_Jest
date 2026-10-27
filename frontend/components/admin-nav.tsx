@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // Day-to-day work first, then website setup.
 const links = [
@@ -22,6 +22,10 @@ const links = [
 
 export function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const current =
+    links.find(([, href]) => href === pathname || (href !== "/admin" && pathname.startsWith(`${href}/`)))?.[1] ??
+    "/admin";
   const navRef = useRef<HTMLElement>(null);
   // On phones the menu is one scrolling row; bring the current page's tab into view.
   useEffect(() => {
@@ -31,15 +35,27 @@ export function AdminNav() {
       nav.scrollLeft = active.offsetLeft - nav.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
   }, [pathname]);
   return (
-    <nav className="admin-nav" aria-label="Admin navigation" ref={navRef}>
-      {links.map(([label, href]) => {
-        const active = href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-        return (
-          <Link key={href} href={href} aria-current={active ? "page" : undefined}>
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <label className="admin-mobile-nav">
+        <span>Admin workspace</span>
+        <select value={current} onChange={(event) => router.push(event.target.value)}>
+          {links.map(([label, href]) => (
+            <option key={href} value={href}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <nav className="admin-nav" aria-label="Admin navigation" ref={navRef}>
+        {links.map(([label, href]) => {
+          const active = href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link key={href} href={href} aria-current={active ? "page" : undefined}>
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

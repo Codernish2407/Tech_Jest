@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { services as fallbackServices, type Service } from "@/frontend/data/services";
+import { type Service } from "@/frontend/data/services";
 import { ServiceIcon } from "@/frontend/components/icons";
 import { AddToCartButton, getCart, removeFromCart } from "@/frontend/components/service-cart";
 import { useAccount } from "@/frontend/components/account";
@@ -31,24 +31,57 @@ export default function CartPage() {
   const { account } = useAccount();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [services, setServices] = useState<Service[]>(fallbackServices);
+  const [services, setServices] = useState<Service[]>([]);
+  const [catalogState, setCatalogState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [draft, setDraft] = useState<Draft | null>(null);
   const selected = useMemo(() => services.filter((item) => slugs.includes(item.slug)), [slugs, services]);
   const startingTotal = selected.reduce((sum, item) => sum + (item.price ?? 0), 0);
+  const unavailableSlugs =
+    catalogState === "ready" ? slugs.filter((slug) => !services.some((item) => item.slug === slug)) : [];
   useEffect(() => {
     const sync = () => setSlugs(getCart());
     sync();
     setDraft(readDraft());
     window.addEventListener("techjest-cart-updated", sync);
-    fetch("/api/services")
-      .then((response) => (response.ok ? (response.json() as Promise<Service[]>) : fallbackServices))
-      .then(setServices)
-      .catch(() => undefined);
-    return () => window.removeEventListener("techjest-cart-updated", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("techjest-cart-updated", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    setCatalogState("loading");
+    fetch("/api/services", { signal: controller.signal, cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Catalog unavailable");
+        const data: unknown = await response.json();
+        if (!Array.isArray(data)) throw new Error("Invalid catalog");
+        if (active) {
+          setServices(data as Service[]);
+          setCatalogState("ready");
+        }
+      })
+      .catch(() => {
+        if (active) setCatalogState("unavailable");
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [catalogAttempt]);
   function remove(slug: string) {
-    removeFromCart(slug);
-    setSlugs(getCart());
+    try {
+      removeFromCart(slug);
+      setSlugs(getCart());
+    } catch {
+      setError("Your browser could not update the cart. Allow site storage and try again.");
+    }
   }
   // Logging in is optional; the quote form is kept so the visitor does not type it again.
   function keepDraftAndLogIn() {
@@ -68,7 +101,7 @@ export default function CartPage() {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || catalogState !== "ready" || unavailableSlugs.length || !selected.length) return;
     setError("");
     setBusy(true);
     const form = new FormData(event.currentTarget);
@@ -93,11 +126,16 @@ export default function CartPage() {
         setError(data?.error ?? "We could not send your quote request.");
         return;
       }
-      window.localStorage.removeItem("techjest-service-cart");
-      window.localStorage.removeItem(DRAFT_KEY);
-      window.dispatchEvent(new Event("techjest-cart-updated"));
       setSlugs([]);
       setSent(true);
+      // The server already accepted the request. A browser-storage failure must never invite a duplicate.
+      try {
+        window.localStorage.removeItem("techjest-service-cart");
+        window.localStorage.removeItem(DRAFT_KEY);
+        window.dispatchEvent(new Event("techjest-cart-updated"));
+      } catch {
+        console.warn("Your quote was sent, but this browser could not clear the saved cart.");
+      }
     } catch {
       setError("We could not connect to TechJest. Please try again.");
     } finally {
@@ -110,6 +148,11 @@ export default function CartPage() {
         <div className="eyebrow">Project cart</div>
         <h1>Build your project package.</h1>
         <p className="lead">Select the services you need, then send us the context so we can prepare a useful quote.</p>
+        {error && (
+          <p className="form-message" role="alert">
+            {error}
+          </p>
+        )}
         {sent ? (
           <div className="success-panel">
             <div className="eyebrow">Request received</div>
@@ -124,9 +167,52 @@ export default function CartPage() {
               </Link>
             )}
           </div>
+        ) : catalogState !== "ready" ? (
+          <div className="catalog-notice" role="status">
+            <h2>
+              {catalogState === "loading"
+                ? "Checking your selected services…"
+                : "We couldn’t load current services and prices."}
+            </h2>
+            <p>
+              {catalogState === "loading"
+                ? "Your project package will appear here in a moment."
+                : "Your saved selections are still in your cart. Try again or contact us to discuss your project."}
+            </p>
+            {catalogState === "unavailable" && (
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setCatalogAttempt((attempt) => attempt + 1)}
+                >
+                  Try again
+                </button>
+                <Link className="btn btn-ghost" href="/contact">
+                  Contact us
+                </Link>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="cart-page-grid">
             <div>
+              {unavailableSlugs.length > 0 && (
+                <div className="catalog-notice" role="status">
+                  <h2>Some selections are no longer available.</h2>
+                  <p>
+                    Remove these services before sending your quote request. Your other selections will stay in your
+                    cart.
+                  </p>
+                  {unavailableSlugs.map((slug) => (
+                    <div key={slug}>
+                      <button type="button" className="text-button" onClick={() => remove(slug)}>
+                        Remove {slug}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="cart-items">
                 {selected.length ? (
                   selected.map((item) => (
@@ -256,12 +342,7 @@ export default function CartPage() {
                     placeholder="What are you trying to build or improve?"
                   />
                 </div>
-                {error && (
-                  <p className="form-message" role="alert">
-                    {error}
-                  </p>
-                )}
-                <button className="btn btn-primary" type="submit" disabled={busy}>
+                <button className="btn btn-primary" type="submit" disabled={busy || unavailableSlugs.length > 0}>
                   {busy ? "Sending request…" : "Request a quote"}
                 </button>
                 {/* Hidden from people and screen readers; only bots fill it in. */}

@@ -13,7 +13,9 @@ export function getCart(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const value = JSON.parse(window.localStorage.getItem(CART_KEY) ?? "[]");
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+    return Array.isArray(value)
+      ? [...new Set(value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())))]
+      : [];
   } catch {
     return [];
   }
@@ -38,7 +40,11 @@ export function CartLink() {
     const update = () => setCount(getCart().length);
     update();
     window.addEventListener(CART_EVENT, update);
-    return () => window.removeEventListener(CART_EVENT, update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener(CART_EVENT, update);
+      window.removeEventListener("storage", update);
+    };
   }, []);
   return (
     <Link className="cart-link" href="/cart" aria-label={`Project cart, ${count} services selected`}>
@@ -50,13 +56,28 @@ export function CartLink() {
 export function AddToCartButton({ service }: { service: Service }) {
   const [added, setAdded] = useState(false);
   useEffect(() => {
-    setAdded(getCart().includes(service.slug));
+    const update = () => setAdded(getCart().includes(service.slug));
+    update();
+    window.addEventListener(CART_EVENT, update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener(CART_EVENT, update);
+      window.removeEventListener("storage", update);
+    };
   }, [service.slug]);
   function handleAdd() {
-    const newItem = addToCart(service.slug);
-    setAdded(true);
-    if (newItem)
-      window.dispatchEvent(new CustomEvent("techjest-toast", { detail: `${service.name} added to your project` }));
+    try {
+      const newItem = addToCart(service.slug);
+      setAdded(true);
+      if (newItem)
+        window.dispatchEvent(new CustomEvent("techjest-toast", { detail: `${service.name} added to your project` }));
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("techjest-toast", {
+          detail: "Your browser could not save the cart. Allow site storage or contact us directly.",
+        }),
+      );
+    }
   }
   return (
     <button className={`btn ${added ? "btn-added" : "btn-primary"}`} type="button" onClick={handleAdd}>
@@ -68,12 +89,17 @@ export function AddToCartButton({ service }: { service: Service }) {
 export function CartToast() {
   const [message, setMessage] = useState("");
   useEffect(() => {
+    let timer: number | undefined;
     const handler = (event: Event) => {
       setMessage((event as CustomEvent<string>).detail);
-      window.setTimeout(() => setMessage(""), 2400);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setMessage(""), 5000);
     };
     window.addEventListener("techjest-toast", handler);
-    return () => window.removeEventListener("techjest-toast", handler);
+    return () => {
+      window.removeEventListener("techjest-toast", handler);
+      window.clearTimeout(timer);
+    };
   }, []);
   return message ? (
     <div className="cart-toast" role="status">

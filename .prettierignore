@@ -7,3 +7,4 @@ public
 *.sql
 .claude
 .next-e2e
+.next-local-check

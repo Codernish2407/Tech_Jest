@@ -1,11 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/backend/supabase/client";
 import { statusLabel } from "@/frontend/data/workflow";
 import { UNREAD_EVENT } from "@/frontend/components/account";
+import { mergeMessages } from "@/lib/message-page";
 
 type Conversation = { id: string; title: string; status: string; priority: string; last_message_at?: string | null };
 type Message = {
@@ -31,15 +32,18 @@ function timeOfDay(value: string) {
   return new Date(value).toLocaleTimeString("en-IN", { timeStyle: "short" });
 }
 
-export function MessageThread({
-  conversation,
-  currentUserId,
-  admin = false,
-}: {
+type ThreadProps = {
   conversation: Conversation;
   currentUserId?: string;
   admin?: boolean;
-}) {
+};
+
+export function MessageThread(props: ThreadProps) {
+  // Switching conversations clears drafts/history and cannot reuse a late response from another thread.
+  return <Thread key={props.conversation.id} {...props} />;
+}
+
+function Thread({ conversation, currentUserId, admin = false }: ThreadProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [content, setContent] = useState("");
@@ -48,8 +52,15 @@ export function MessageThread({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [sending, setSending] = useState(false);
-  // How many messages this view has seen, so a new arrival can refresh the status around the thread.
-  const knownCount = useRef<number | null>(null);
+  const [nextCursor, setNextCursor] = useState("");
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const knownLatest = useRef<string | null>(null);
+  const hasLoadedHistory = useRef(false);
+  const active = useRef(true);
+  const latestRequest = useRef<AbortController | null>(null);
+  const historyRequest = useRef<AbortController | null>(null);
+  const scrollAnchor = useRef<{ height: number; top: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Whether the reader is at the newest message; if they scrolled up to read, new arrivals leave them there.
   const atBottom = useRef(true);
@@ -63,57 +74,111 @@ export function MessageThread({
 
   useEffect(() => {
     const list = listRef.current;
-    if (list && atBottom.current) list.scrollTop = list.scrollHeight;
+    if (list && scrollAnchor.current) {
+      list.scrollTop = scrollAnchor.current.top + list.scrollHeight - scrollAnchor.current.height;
+      scrollAnchor.current = null;
+    } else if (list && atBottom.current) list.scrollTop = list.scrollHeight;
   }, [messages, loading]);
 
-  async function load() {
+  const load = useCallback(async () => {
+    if (document.visibilityState === "hidden") return;
+    latestRequest.current?.abort();
+    const controller = new AbortController();
+    latestRequest.current = controller;
     try {
-      const response = await fetch(`/api/conversations/${conversation.id}/messages`);
+      const response = await fetch(`/api/conversations/${conversation.id}/messages`, { signal: controller.signal });
       if (!response.ok) throw new Error("Could not load messages");
       const loaded = (await response.json()) as Message[];
-      setMessages(loaded);
+      if (!active.current || controller.signal.aborted) return;
+      setMessages((current) => mergeMessages(current, loaded));
+      if (!hasLoadedHistory.current) setNextCursor(response.headers.get("X-Next-Cursor") ?? "");
       setLoadError("");
-      if (knownCount.current !== null && loaded.length > knownCount.current) router.refresh();
+      const latest = loaded.at(-1)?.id ?? "";
+      if (knownLatest.current !== null && latest !== knownLatest.current) router.refresh();
       // Loading marks the thread read, so the header bell recounts on first open and on new arrivals.
-      if (knownCount.current === null || loaded.length > knownCount.current)
-        window.dispatchEvent(new Event(UNREAD_EVENT));
-      knownCount.current = loaded.length;
+      if (latest !== knownLatest.current) window.dispatchEvent(new Event(UNREAD_EVENT));
+      knownLatest.current = latest;
     } catch {
+      if (!active.current || controller.signal.aborted) return;
       setLoadError("Messages could not be loaded. Check your connection and try again.");
+    } finally {
+      if (active.current && !controller.signal.aborted) setLoading(false);
     }
-    setLoading(false);
+  }, [conversation.id, router]);
+
+  async function loadEarlier() {
+    if (!nextCursor || loadingEarlier) return;
+    setLoadingEarlier(true);
+    setHistoryError("");
+    const controller = new AbortController();
+    historyRequest.current = controller;
+    try {
+      const response = await fetch(
+        `/api/conversations/${conversation.id}/messages?before=${encodeURIComponent(nextCursor)}`,
+        {
+          signal: controller.signal,
+        },
+      );
+      if (!response.ok) throw new Error("Could not load earlier messages");
+      const older = (await response.json()) as Message[];
+      if (!active.current || controller.signal.aborted) return;
+      const list = listRef.current;
+      if (list) scrollAnchor.current = { height: list.scrollHeight, top: list.scrollTop };
+      atBottom.current = false;
+      hasLoadedHistory.current = true;
+      setMessages((current) => mergeMessages(current, older));
+      setNextCursor(response.headers.get("X-Next-Cursor") ?? "");
+    } catch {
+      if (active.current && !controller.signal.aborted)
+        setHistoryError("Earlier messages could not be loaded. Please retry.");
+    } finally {
+      if (active.current && !controller.signal.aborted) setLoadingEarlier(false);
+    }
   }
   useEffect(() => {
+    active.current = true;
     void load();
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
     // Live updates must carry the signed-in session, or the security rules hide every message from them.
     // The browser client loads its session after the socket opens, so hand the token over before subscribing.
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) await supabase.realtime.setAuth(data.session.access_token);
-      if (cancelled) return;
-      // A unique name per subscription: reusing one can hand a new subscription a channel that is still
-      // being removed (React mounts effects twice in development), which silently stops live updates.
-      channel = supabase
-        .channel(`conversation-${conversation.id}-${crypto.randomUUID()}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversation.id}` },
-          () => void load(),
-        )
-        .subscribe();
-    });
+    void supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (data.session) await supabase.realtime.setAuth(data.session.access_token);
+        if (cancelled) return;
+        // A unique name per subscription: reusing one can hand a new subscription a channel that is still
+        // being removed (React mounts effects twice in development), which silently stops live updates.
+        channel = supabase
+          .channel(`conversation-${conversation.id}-${crypto.randomUUID()}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversation.id}` },
+            () => void load(),
+          )
+          .subscribe();
+      })
+      .catch(() => {
+        // Polling remains available when a realtime connection cannot be established.
+        console.warn("Live message updates are unavailable; messages will refresh periodically.");
+      });
     const timer = window.setInterval(() => void load(), 15000);
+    const onVisible = () => void load();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      active.current = false;
+      latestRequest.current?.abort();
+      historyRequest.current?.abort();
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [conversation.id]);
+  }, [conversation.id, load]);
   async function send(event: FormEvent) {
     event.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() || sending) return;
     setStatus("");
     setSending(true);
     try {
@@ -127,9 +192,9 @@ export function MessageThread({
         return;
       }
       const message = (await response.json()) as Message;
+      if (!active.current) return;
       atBottom.current = true;
-      setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message]));
-      if (knownCount.current !== null) knownCount.current += 1;
+      setMessages((current) => mergeMessages(current, [message]));
       setContent("");
       setStatus(internal ? "Internal note saved" : "Sent");
       // The conversation's status changes with each message; refresh the badges and unread counts around the thread.
@@ -160,6 +225,16 @@ export function MessageThread({
           atBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
         }}
       >
+        {nextCursor && !loading && (
+          <button type="button" className="btn btn-ghost" onClick={() => void loadEarlier()} disabled={loadingEarlier}>
+            {loadingEarlier ? "Loading earlier messages…" : "Load earlier messages"}
+          </button>
+        )}
+        {historyError && (
+          <p className="admin-message" role="alert">
+            {historyError}
+          </p>
+        )}
         {loading ? (
           <p className="admin-message">Loading conversation...</p>
         ) : loadError ? (

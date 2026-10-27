@@ -4,28 +4,55 @@ import { isUuid } from "@/lib/uuid";
 import { getSiteUrl } from "@/lib/site-url";
 import { sendClientEmail, sendTeamAlert, teamNoticeEmail } from "@/backend/email/team-alert";
 import { getSessionUser } from "@/backend/supabase/session";
+import { decodeMessageCursor, encodeMessageCursor, MESSAGE_PAGE_SIZE } from "@/lib/message-page";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   const supabase = await createClient();
   const user = await getSessionUser(supabase);
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-  const { data, error } = await supabase
+  const before = new URL(request.url).searchParams.get("before");
+  const cursor = before === null ? null : decodeMessageCursor(before);
+  if (before !== null && !cursor) return NextResponse.json({ error: "Invalid message cursor." }, { status: 400 });
+  const { data: conversation, error: conversationError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (conversationError) return NextResponse.json({ error: "Could not load conversation." }, { status: 500 });
+  if (!conversation) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  let query = supabase
     .from("messages")
     .select("id, conversation_id, sender_id, sender_type, content, message_type, created_at, edited_at")
     .eq("conversation_id", id)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(100);
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(MESSAGE_PAGE_SIZE + 1);
+  if (cursor)
+    query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: "Could not load messages." }, { status: 500 });
-  await supabase.from("conversation_participants").upsert({
-    conversation_id: id,
-    user_id: user.id,
-    role: user.app_metadata?.role === "admin" ? "admin" : "client",
-    last_read_at: new Date().toISOString(),
+  const hasMore = (data?.length ?? 0) > MESSAGE_PAGE_SIZE;
+  const messages = (data ?? []).slice(0, MESSAGE_PAGE_SIZE).reverse();
+  const latest = messages.at(-1);
+  // Older-history reads must never move the read cursor backwards. A message arriving after this
+  // query stays unread; mark only through the newest timestamp actually returned to the caller.
+  if (!cursor && latest) {
+    const { error: readError } = await supabase.rpc("mark_conversation_read", {
+      p_conversation_id: id,
+      p_read_at: latest.created_at,
+    });
+    if (readError)
+      return NextResponse.json({ error: "Could not mark this conversation as read. Please retry." }, { status: 500 });
+  }
+  return NextResponse.json(messages, {
+    headers: {
+      "X-Next-Cursor": hasMore && messages[0] ? encodeMessageCursor(messages[0]) : "",
+      "Cache-Control": "private, no-store",
+    },
   });
-  return NextResponse.json(data ?? []);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,8 +66,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const isAdmin = user.app_metadata?.role === "admin";
   if (!content || content.length > 5000)
     return NextResponse.json({ error: "Message must be between 1 and 5000 characters." }, { status: 400 });
+  if (body?.internal !== undefined && typeof body.internal !== "boolean")
+    return NextResponse.json({ error: "Invalid internal-note option." }, { status: 400 });
   if (body?.internal && !isAdmin)
     return NextResponse.json({ error: "Only admins can create internal notes." }, { status: 403 });
+  const { data: visible, error: accessError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (accessError) return NextResponse.json({ error: "Could not verify conversation access." }, { status: 500 });
+  if (!visible) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   const { data, error } = await supabase
     .from("messages")
     .insert({

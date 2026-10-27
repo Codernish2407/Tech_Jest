@@ -7,7 +7,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const env = { ...process.env, NEXT_DIST_DIR: ".next-e2e" };
+if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")) {
+  throw new Error("Browser tests require an explicitly configured local Supabase URL.");
+}
+const env = {
+  ...process.env,
+  NEXT_DIST_DIR: ".next-e2e",
+  // Email integration is outside browser-test scope. Empty process values override .env.local.
+  RESEND_API_KEY: "",
+  ALERT_EMAIL_TO: "",
+  ALERT_EMAIL_FROM: "",
+  NEXT_TELEMETRY_DISABLED: "1",
+};
 const nextEnv = path.join(root, "next-env.d.ts");
 const savedNextEnv = fs.readFileSync(nextEnv, "utf8");
 try {

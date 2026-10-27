@@ -24,7 +24,7 @@ Path aliases: `@/*` → `src/*`, `@/frontend/*` → `frontend/*`, `@/backend/*` 
 ## Design
 
 - **Colours** are CSS variables at the top of [`src/app/globals.css`](./src/app/globals.css): Midnight Navy `#1B1E4A`, Warm Stone Grey `#AFAEA2`, and Crimson Red `#D21319`.
-- **Fonts:** Source Serif 4 for headings and Manrope for text, self-hosted through `next/font`.
+- **Fonts:** Source Serif 4 for headings and Manrope for text, bundled under `public/fonts/` with their licenses and loaded by `src/app/fonts.css`. Builds do not download fonts; the original Unicode subsets, weights, and fallback metrics are preserved.
 - **Opening animation:** [`frontend/components/site-intro.tsx`](./frontend/components/site-intro.tsx) plays `public/opening_animation_video.mp4` when the homepage (or `/opening_animation_video`) is loaded, never for visitors who prefer reduced motion or for crawlers. The Skip button, Escape, Space, or Enter skips it. Other pages never load the video.
 - **Icons:** [`frontend/components/icons.tsx`](./frontend/components/icons.tsx), including one icon per service category.
 - **Link preview and app icons:** [`src/app/opengraph-image.tsx`](./src/app/opengraph-image.tsx), `src/app/favicon.ico`, `src/app/icon.png`, `src/app/apple-icon.png`, and `public/icons/`.
@@ -37,7 +37,7 @@ Path aliases: `@/*` → `src/*`, `@/frontend/*` → `frontend/*`, `@/backend/*` 
 
 ## Run locally
 
-Requires Node.js 20+ (`.nvmrc` pins 22.14.0).
+Use Node.js 22.14.0 from `.nvmrc`. Development checks require Node 22.12+, Node 24, or Node 26+ (see `package.json`).
 
 ```bash
 npm install
@@ -54,6 +54,7 @@ Open `http://localhost:3000`.
 | `npm run typecheck`    | TypeScript check                              |
 | `npm test`             | Unit and API route tests (Vitest)             |
 | `npm run check`        | Typecheck, tests, format check, then build (CI) |
+| `npm run check:local`  | Same checks with external integrations disconnected; not a release build |
 | `npm run format`       | Format the code with Prettier                 |
 | `npm run format:check` | Report files that need formatting             |
 | `npm run e2e:db`       | Start the local Supabase for browser tests    |
@@ -70,6 +71,8 @@ Open `http://localhost:3000`.
 4. `npm run e2e:db:stop` when you are done.
 
 CI runs the same steps on every push and pull request.
+
+For local source checks without accessing configured Supabase/email services, run `npm run check:local`. It uses `.next-local-check` and leaves real environment files alone. Database and browser tests still require the local Supabase stack. See [the 26 October audit rollout notes](docs/audit-rollout-2026-10-26.md) for the required migration, verification limits, and release order.
 
 ## Deployment
 

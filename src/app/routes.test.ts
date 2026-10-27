@@ -122,6 +122,42 @@ describe("/api/conversations/[id]/messages", () => {
 });
 
 describe("/api/conversations", () => {
+  it("creates a conversation and membership with one atomic RPC", async () => {
+    const { POST } = await import("./api/conversations/route");
+    state.user = client;
+    expect((await POST(json({ title: "  Project discussion  " }))).status).toBe(201);
+    expect(state.tables).toEqual([]);
+    expect(state.rpcs).toEqual([
+      {
+        name: "start_client_conversation",
+        args: { p_title: "Project discussion", p_request_id: null, p_project_id: null },
+      },
+    ]);
+  });
+  it.each([
+    ["42501", 403],
+    ["22023", 400],
+    ["PGRST202", 503],
+  ] as const)("handles conversation RPC failure %s", async (code, status) => {
+    const { POST } = await import("./api/conversations/route");
+    state.user = client;
+    state.rpcError = { code, message: "Private database detail" };
+    const response = await POST(json({ title: "Project discussion" }));
+    expect(response.status).toBe(status);
+    expect(await response.text()).not.toContain("Private database detail");
+    expect(state.tables).toEqual([]);
+  });
+
+  it.each([null, [], "hello", 42, true].map((body) => ({ body })))(
+    "rejects a non-object body ($body)",
+    async ({ body }) => {
+      const { POST } = await import("./api/conversations/route");
+      state.user = client;
+      expect((await POST(json(body))).status).toBe(400);
+      expect(state.tables).toEqual([]);
+    },
+  );
+
   it("rejects malformed request and project ids", async () => {
     const { POST } = await import("./api/conversations/route");
     state.user = client;
@@ -139,6 +175,25 @@ describe("/api/contact from visitors without an account", () => {
     name: "Asha Rao",
     email: "asha@example.com",
   };
+
+  it.each([null, [], "hello", 42, true].map((body) => ({ body })))(
+    "rejects a non-object body ($body)",
+    async ({ body }) => {
+      const { POST } = await import("./api/contact/route");
+      expect((await POST(json(body))).status).toBe(400);
+      expect(state.rpcs).toEqual([]);
+      expect(state.after).toEqual([]);
+    },
+  );
+
+  it.each(["website", [null], [42], [""], Array(31).fill("website")].map((serviceSlugs) => ({ serviceSlugs })))(
+    "rejects invalid service selections ($serviceSlugs)",
+    async ({ serviceSlugs }) => {
+      const { POST } = await import("./api/contact/route");
+      expect((await POST(json({ ...enquiry, serviceSlugs }))).status).toBe(400);
+      expect(state.rpcs).toEqual([]);
+    },
+  );
 
   it("saves a guest enquiry through the guest database function and alerts the team", async () => {
     const { POST } = await import("./api/contact/route");

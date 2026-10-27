@@ -67,6 +67,8 @@ export function SiteIntro() {
   }, []);
 
   useEffect(() => {
+    // Client navigation must not hide the site again after the overlay is dismissed.
+    if (revealedRef.current) return;
     // Only play on the opening pages ("/?intro=1" replays it on the homepage).
     if (!isIntroPage(pathname)) {
       revealWebsite();

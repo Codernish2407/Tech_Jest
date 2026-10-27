@@ -1,6 +1,6 @@
 # Known issues, risks, and limitations
 
-These items are documented only; no issue was fixed during this task. Severity reflects the potential impact, not confirmed exploitation. Remote services, production configuration, and real user behavior are not available for verification here.
+Sections 1–26 contain historical findings and updates from earlier tasks. For the 26 October 2026 local fixes, verification limits and prioritized remaining work, see `audit-2026-10-26.md` and sections 27–28 below. Production configuration and behavior are not verified by this repository audit.
 
 ## 1. Email login does not consume the cart `next` parameter
 
@@ -275,3 +275,18 @@ These items are documented only; no issue was fixed during this task. Severity r
 - **Guest requests are not linked to an account** if the guest signs up later with the same email.
 - **No IP address in the activity log** (the database trigger cannot see it).
 - **No online invoice payment;** clients see invoices but pay outside the site.
+
+## 27. Local fixes and open verification — 26 October 2026
+
+Implemented message history beyond 100 rows, cursor-based older-history navigation, safer read-state updates, strict object/selection validation, generic admin error responses, bounded rate limiting, cart storage error handling, bundled fonts and isolated test configuration. The new migration hardens direct request writes and guest/client quota concurrency without rewriting historical rows.
+
+Unit/API checks pass. Database/RLS/concurrency tests and browser checks remain blocked by Docker/Chrome access. The SQL migration must be tested and approved before applying it; it is required before deploying the updated message-history endpoint. No current full npm dependency-audit result is available because registry access failed.
+
+Remaining product work includes atomic free-standing conversation creation, large-admin-list pagination, orphaned document cleanup, catalog outage states, and production monitoring. See the prioritized checklist in `audit-2026-10-26.md`; the application is not certified production-ready.
+
+## 28. Frontend and conversation follow-up — 27 October 2026
+
+- Shared design and responsive navigation were refined across the 31 page routes. Marketplace/cart failures now have loading, outage and retry states; the cart does not substitute fallback prices. Full scope: `frontend-update-2026-10-27.md`.
+- Atomic conversation creation is implemented in source and depends on `2026-10-27-conversation-creation.sql`, which is **not applied**. Request/project retries reuse a thread; unlinked creations are not deduplicated.
+- 79 unit/API tests pass; the isolated build passes. 57 browser/database tests are collected but **not executed**. Do not infer visual, RLS, concurrency or production integration sign-off from these results.
+- Admin list pagination at scale, durable orphaned-file cleanup, distributed rate limiting and approved monitoring remain follow-ups.

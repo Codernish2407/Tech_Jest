@@ -8,6 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && vitest --run && npm run format:check && npm run build",
+    "check:local": "node scripts/check-local.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest",
@@ -16,7 +17,7 @@
     "e2e:db:stop": "node e2e/stop-supabase.mjs"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -116,33 +116,43 @@ test("a proposal can be answered once, by its own client, while it is valid", as
 test("a long thread opens at the newest message", async ({ page }) => {
   const deal = await clientWithProposal();
   await admin.from("messages").insert(
-    Array.from({ length: 30 }, (_, index) => ({
+    Array.from({ length: 130 }, (_, index) => ({
       conversation_id: deal.conversationId,
       sender_id: deal.team.id,
       sender_type: "admin",
       content: `Update number ${index + 1}`,
       message_type: "text",
+      created_at: new Date(Date.now() + index).toISOString(),
     })),
   );
   await page.setViewportSize({ width: 375, height: 812 });
   await logIn(page, deal.user.email, deal.user.password);
   await page.goto(`/messages?conversation=${deal.conversationId}`);
-  await expect(page.getByText("Update number 30")).toBeVisible();
+  await expect(page.getByText("Update number 130", { exact: true })).toBeVisible();
+  await expect(page.getByText("Update number 1", { exact: true })).toHaveCount(0);
   const list = page.locator(".message-list");
   await expect
     .poll(() => list.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight))
     .toBeLessThan(5);
+  await page.getByRole("button", { name: "Load earlier messages" }).click();
+  await expect(page.getByText("Update number 1", { exact: true })).toBeAttached();
+  await expect(page.getByRole("button", { name: "Load earlier messages" })).toHaveCount(0);
+  await page.getByLabel("Message", { exact: true }).fill("A reply after 130 updates.");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.getByText("A reply after 130 updates.", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("A reply after 130 updates.", { exact: true })).toBeVisible();
 });
 
-test("on a phone the admin console starts with its tabs, and the current tab is in view", async ({ page }) => {
+test("on a phone the admin console starts with its workspace selector", async ({ page }) => {
   const deal = await clientWithProposal();
   await page.setViewportSize({ width: 375, height: 812 });
   await logInAsAdmin(page, deal.team.email, deal.team.password);
   await page.goto("/admin/settings");
   await expect(page.locator(".admin-sidebar h2")).toBeHidden();
-  const tab = page.locator('.admin-nav [aria-current="page"]');
-  await expect(tab).toHaveText("Website settings");
-  const box = await tab.boundingBox();
+  const selector = page.getByRole("combobox", { name: "Admin workspace" });
+  await expect(selector).toHaveValue("/admin/settings");
+  const box = await selector.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(375);
 

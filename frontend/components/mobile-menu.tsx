@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { CartLink } from "@/frontend/components/service-cart";
 import { useAccount } from "@/frontend/components/account";
 import { CloseIcon, MenuIcon } from "@/frontend/components/icons";
@@ -15,6 +16,9 @@ const links: readonly (readonly [string, string])[] = [
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const { account } = useAccount();
   const signedIn = Boolean(account);
   const admin = account?.admin ?? false;
@@ -27,14 +31,34 @@ export function MobileMenu() {
   useEffect(() => {
     if (!open) return;
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     }
+    function closeOutside(event: Event) {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false);
+    }
+    const desktop = window.matchMedia("(min-width: 1121px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("focusin", closeOutside);
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("focusin", closeOutside);
+      desktop.removeEventListener("change", closeOnDesktop);
+    };
   }, [open]);
+  useEffect(() => setOpen(false), [pathname]);
   return (
-    <div className="mobile-menu">
+    <div className="mobile-menu" ref={menuRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="menu-btn"
         aria-label={open ? "Close menu" : "Open menu"}
@@ -45,10 +69,21 @@ export function MobileMenu() {
         {open ? <CloseIcon /> : <MenuIcon />}
       </button>
       {open && (
-        <div id="mobile-navigation-panel" className="mobile-panel" role="dialog" aria-label="Mobile navigation">
+        <div
+          id="mobile-navigation-panel"
+          className="mobile-panel"
+          onClick={(event) => {
+            if (event.target instanceof Element && event.target.closest("a")) setOpen(false);
+          }}
+        >
           <nav aria-label="Mobile navigation">
             {[...links, ...accountLinks].map(([label, href]) => (
-              <Link key={href} href={href} onClick={() => setOpen(false)}>
+              <Link
+                key={href}
+                href={href}
+                aria-current={pathname === href || pathname.startsWith(`${href}/`) ? "page" : undefined}
+                onClick={() => setOpen(false)}
+              >
                 {label}
               </Link>
             ))}

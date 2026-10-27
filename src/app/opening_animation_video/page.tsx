@@ -15,7 +15,7 @@ export default function OpeningAnimationPage() {
       <Link href="/services" className="cta-button">
         EXPLORE SOLUTIONS
       </Link>
-      <Link
+      <a
         href="/?intro=1"
         style={{
           marginTop: "1.5rem",
@@ -27,7 +27,7 @@ export default function OpeningAnimationPage() {
         }}
       >
         Replay Intro on Homepage
-      </Link>
+      </a>
     </div>
   );
 }

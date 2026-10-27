@@ -26,6 +26,8 @@ export async function POST(request: Request) {
     requestId?: unknown;
     projectId?: unknown;
   } | null;
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   const title = (typeof body?.title === "string" && body.title.trim().slice(0, 160)) || "TechJest conversation";
   const requestId = body?.requestId ?? null;
   const projectId = body?.projectId ?? null;
@@ -61,24 +63,15 @@ export async function POST(request: Request) {
     if (!requestRow)
       return NextResponse.json({ error: "You can only start a conversation for your own project." }, { status: 403 });
   }
-  const { data, error } = await supabase
-    .from("conversations")
-    .insert({
-      title,
-      request_id: requestId,
-      project_id: projectId,
-      client_id: user.id,
-      created_by: user.id,
-    })
-    .select("id, title, status, priority")
-    .single();
-  if (error) return NextResponse.json({ error: "Could not create conversation." }, { status: 500 });
-  const { error: participantError } = await supabase
-    .from("conversation_participants")
-    .insert({ conversation_id: data.id, user_id: user.id, role: "client" });
-  if (participantError) {
-    console.error("Could not add conversation participant", participantError);
-    return NextResponse.json({ error: "Conversation created but could not add you to it." }, { status: 500 });
+  const { data, error } = await supabase.rpc("start_client_conversation", {
+    p_title: title,
+    p_request_id: requestId,
+    p_project_id: projectId,
+  });
+  if (error) {
+    console.error("Could not start conversation", { code: error.code });
+    const status = error.code === "42501" ? 403 : error.code === "22023" ? 400 : 503;
+    return NextResponse.json({ error: "Could not start this conversation. Please try again." }, { status });
   }
   return NextResponse.json(data, { status: 201 });
 }

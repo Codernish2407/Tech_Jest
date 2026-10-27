@@ -28,8 +28,17 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   // Looks like success to the bot, so it does not retry; nothing is saved.
   if (typeof body.website === "string" && body.website.trim()) return NextResponse.json({ ok: true });
+  if (
+    body.serviceSlugs !== undefined &&
+    (!Array.isArray(body.serviceSlugs) ||
+      body.serviceSlugs.length > 30 ||
+      body.serviceSlugs.some((slug) => typeof slug !== "string" || !slug.trim() || slug.length > 160))
+  )
+    return NextResponse.json({ error: "Select up to 30 valid services." }, { status: 400 });
   const supabase = await createClient();
   const user = await getSessionUser(supabase);
   const services = await getServices({ fallbackOnMissingTable: false });

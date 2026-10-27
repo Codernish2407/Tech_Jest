@@ -8,6 +8,42 @@ async function fillCart(page: Page, slugs: string[]) {
   await expect(page.locator("#quote-name")).toBeVisible();
 }
 
+test("a successful quote stays successful when browser storage cleanup fails", async ({ page }) => {
+  await fillCart(page, ["landing-page"]);
+  await page.locator("#quote-name").fill("Storage Guest");
+  await page.locator("#quote-email").fill("storage@example.test");
+  await page.locator("#quote-phone").fill("12345");
+  await page.locator("#quote-message").fill("Please build a landing page for our clinic launch.");
+  let submissions = 0;
+  await page.route("**/api/contact", (route) => {
+    submissions += 1;
+    return route.fulfill({ json: { ok: true, guest: true } });
+  });
+  await page.evaluate(() => {
+    Storage.prototype.removeItem = () => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    };
+  });
+  await page.getByRole("button", { name: "Request a quote" }).click();
+  await expect(page.getByRole("heading", { name: "We’ll be in touch." })).toBeVisible();
+  await expect(page.getByText("We could not connect to TechJest. Please try again.")).toHaveCount(0);
+  expect(submissions).toBe(1);
+});
+
+test("blocked cart storage shows an actionable error instead of a false success", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/services/landing-page");
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("Storage full", "QuotaExceededError");
+    };
+  });
+  await page.getByRole("button", { name: "Add to project", exact: true }).first().click();
+  await expect(page.getByRole("status")).toContainText("Your browser could not save the cart");
+  expect(errors).toEqual([]);
+});
+
 test("a signed-in client sends a request into their workspace", async ({ page }) => {
   const user = await createUser({ prefix: "client-request" });
   await logIn(page, user.email, user.password);

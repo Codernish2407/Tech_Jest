@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/frontend/components/workspace-nav";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -33,6 +34,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   return (
     <section className="section">
       <div className="container dashboard">
+        <WorkspaceNav />
         <div className="dashboard-head">
           <div>
             <div className="eyebrow">Client portal</div>
@@ -58,6 +60,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                     className={`conversation-list-item ${item.id === first?.id ? "active" : ""}`}
                     href={`/messages?conversation=${item.id}`}
                     key={item.id}
+                    aria-current={item.id === first?.id ? "page" : undefined}
                   >
                     <strong>
                       {item.title}

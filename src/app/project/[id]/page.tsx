@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/frontend/components/workspace-nav";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/backend/supabase/server";
@@ -73,6 +74,7 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   return (
     <section className="section">
       <div className="container dashboard">
+        <WorkspaceNav />
         <div className="eyebrow">Client project</div>
         <h1>{project.name}.</h1>
         <p className="lead">

@@ -16,7 +16,9 @@ export default async function Contact() {
       </section>
       <section className="section">
         <div className="container contact-grid">
-          <div>
+          <div className="contact-form-panel">
+            <h2>Let’s hear your idea.</h2>
+            <p className="form-note">A few details help us give you a useful first reply.</p>
             <ContactForm />
           </div>
           <aside className="contact-side">

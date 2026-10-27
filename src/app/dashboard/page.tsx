@@ -1,3 +1,4 @@
+import { WorkspaceNav } from "@/frontend/components/workspace-nav";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -106,6 +107,7 @@ export default async function Dashboard() {
   return (
     <section className="section">
       <div className="container dashboard">
+        <WorkspaceNav />
         <div className="eyebrow">Private workspace</div>
         <h1>Good to see you, {profile?.full_name?.split(" ")[0] ?? "there"}.</h1>
         <p className="lead">Your account, project requests, and next steps in one place.</p>

@@ -33,7 +33,8 @@ export default defineConfig({
   webServer: {
     command: "node e2e/serve.mjs",
     url: "http://localhost:3200/api/health",
-    reuseExistingServer: !process.env.CI,
+    // An arbitrary server on this port could have been built against production credentials.
+    reuseExistingServer: false,
     timeout: 300_000,
     env: {
       NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,

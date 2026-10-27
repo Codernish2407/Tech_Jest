@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getCart, addToCart, removeFromCart } from "@/frontend/components/service-cart";
 import { getLoginDestination } from "./login-destination";
 import { findServiceArea } from "@/frontend/data/service-areas";
@@ -25,6 +25,7 @@ class LocalStorageMock {
 }
 
 describe("Flow 1: Service Cart Lifecycle (/services → /cart)", () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     const mockStorage = new LocalStorageMock();
     vi.stubGlobal("window", {
@@ -65,6 +66,11 @@ describe("Flow 1: Service Cart Lifecycle (/services → /cart)", () => {
   it("gracefully recovers from corrupt localStorage data", () => {
     window.localStorage.setItem("techjest-service-cart", "invalid-json{{");
     expect(getCart()).toEqual([]);
+  });
+
+  it("ignores duplicate, empty and non-string values in stored selections", () => {
+    window.localStorage.setItem("techjest-service-cart", JSON.stringify(["landing-page", "", null, 9, "landing-page"]));
+    expect(getCart()).toEqual(["landing-page"]);
   });
 });
 

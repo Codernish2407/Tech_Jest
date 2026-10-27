@@ -25,6 +25,8 @@ What is still open before TechJest is fully launch-ready. Items marked _owner_ n
 
 ## Technical sign-off
 
+- [ ] Validate `2026-10-26-request-and-message-safety.sql` and `2026-10-27-conversation-creation.sql` with the local database/browser suite, then obtain approval to apply it before deploying the matching message-history and conversation-creation code. See `docs/audit-rollout-2026-10-26.md`. Prepared locally; not applied or integration-verified in this audit.
+
 - [ ] Production deploy includes `vercel.json` (server region `bom1`, next to the database).
 - [ ] Run `backend/supabase/migrations/2026-10-07-live-messages-and-indexes.sql` on the live database (instant message updates, one security fix, three indexes).
 - [x] Run `backend/supabase/migrations/2026-10-22-security-hardening.sql` on the live database (done by the owner, 23 October 2026).

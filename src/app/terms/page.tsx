@@ -21,7 +21,7 @@ export default async function Terms() {
         </div>
       </section>
       <section className="section">
-        <div className="container">
+        <div className="container legal-content">
           <h2>Using this website</h2>
           <p>
             You may browse this site and send enquiries for lawful purposes. Please do not misuse it, attempt to access

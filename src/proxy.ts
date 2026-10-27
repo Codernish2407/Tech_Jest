@@ -1,32 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { createRateLimiter } from "@/lib/rate-limit";
 
-// Simple in-memory token bucket rate limiter: max 100 requests per minute per IP.
-const RATE_LIMIT = 100; // requests per window
-const WINDOW_MS = 60 * 1000; // 1 minute
-const ipRequests = new Map<string, number[]>();
+const allowRequest = createRateLimiter();
 
 export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/api/")) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const now = Date.now();
-    const timestamps = ipRequests.get(ip) ?? [];
-    const recent = timestamps.filter((t) => now - t < WINDOW_MS);
-    recent.push(now);
-    ipRequests.set(ip, recent);
-
-    if (recent.length > RATE_LIMIT) {
-      return new NextResponse("Too many requests", { status: 429 });
-    }
-
-    // Prune stale entries when the cache grows to prevent memory leaks
-    if (ipRequests.size > 500) {
-      for (const [trackedIp, times] of ipRequests.entries()) {
-        if (!times.some((t) => now - t < WINDOW_MS)) {
-          ipRequests.delete(trackedIp);
-        }
-      }
-    }
+    const result = allowRequest(ip);
+    if (!result.allowed)
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a moment and try again." },
+        { status: 429, headers: { "Retry-After": String(result.retryAfter), "Cache-Control": "no-store" } },
+      );
   }
 
   let response = NextResponse.next({ request });
@@ -54,5 +40,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Static files and generated icons/previews never need a session refresh.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image|icons|images).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image|icons|images|fonts/).*)",
+  ],
 };
