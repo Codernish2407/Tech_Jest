@@ -25,7 +25,7 @@ Path aliases: `@/*` → `src/*`, `@/frontend/*` → `frontend/*`, `@/backend/*` 
 
 - **Colours** are CSS variables at the top of [`src/app/globals.css`](./src/app/globals.css): Midnight Navy `#1B1E4A`, Warm Stone Grey `#AFAEA2`, and Crimson Red `#D21319`.
 - **Fonts:** Source Serif 4 for headings and Manrope for text, bundled under `public/fonts/` with their licenses and loaded by `src/app/fonts.css`. Builds do not download fonts; the original Unicode subsets, weights, and fallback metrics are preserved.
-- **Opening animation:** [`frontend/components/site-intro.tsx`](./frontend/components/site-intro.tsx) plays `public/opening_animation_video.mp4` when the homepage (or `/opening_animation_video`) is loaded, never for visitors who prefer reduced motion or for crawlers. The Skip button, Escape, Space, or Enter skips it. Other pages never load the video.
+- **Opening animation:** A quiet, approximately one-second wordmark fade on the first homepage visit per tab. Uses the existing fonts and brand colours; no video is downloaded. Reduced-motion users, crawlers, anchor links and subsequent visits skip it. Keyboard, pointer or wheel interaction dismisses it immediately. `/?intro=1` replays it; `/opening_animation_video` remains a compatible welcome page. Page content is never hidden or scroll-locked, and an independent timer clears the greeting if hydration fails.
 - **Icons:** [`frontend/components/icons.tsx`](./frontend/components/icons.tsx), including one icon per service category.
 - **Link preview and app icons:** [`src/app/opengraph-image.tsx`](./src/app/opengraph-image.tsx), `src/app/favicon.ico`, `src/app/icon.png`, `src/app/apple-icon.png`, and `public/icons/`.
 

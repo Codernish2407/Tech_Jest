@@ -557,163 +557,83 @@ p {
   outline-color: var(--crimson);
 }
 
-/* --- OPENING ANIMATION OVERLAY (Video intro) --- */
-/* Lock scrolling while the intro animation is playing */
-html.intro-active,
-body.intro-active {
-  overflow: hidden !important;
-  background-color: #050714;
-}
-
-#intro-loader {
+/* Brief brand greeting. The page remains visible and interactive underneath. */
+.site-welcome {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #050714; /* Deep midnight blue/black matching the video */
-  z-index: 99999;
-  justify-content: center;
-  align-items: center;
-  transition:
-    opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 1.2s;
-}
-
-/* Display only when intro is active */
-html[data-intro="play"] #intro-loader,
-body.intro-active #intro-loader {
-  display: flex;
-}
-
-/* Class triggered via JS when video finishes or is skipped */
-#intro-loader.fade-out {
-  opacity: 0;
-  visibility: hidden;
+  inset: 0;
+  z-index: 100;
+  place-items: center;
+  background: var(--paper);
+  color: var(--navy);
   pointer-events: none;
 }
-
-#intro-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Ensures full-screen coverage without black bars */
+html[data-intro="play"] .site-welcome {
+  display: grid;
+  animation: welcome-exit 300ms ease 750ms forwards;
 }
-
-/* --- SKIP INTRO BUTTON --- */
-#skip-btn {
-  position: absolute;
-  bottom: 40px;
-  right: 40px;
-  padding: 10px 24px;
-  background: rgba(5, 12, 36, 0.65);
-  color: #00d2ff;
-  border: 1px solid rgba(0, 210, 255, 0.4);
-  border-radius: 30px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
-  z-index: 100000;
-  user-select: none;
-  outline: none;
+.welcome-brand {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  max-width: calc(100% - 40px);
+  text-align: center;
+  animation: welcome-enter 420ms var(--ease) both;
 }
-
-#skip-btn:hover,
-#skip-btn:focus-visible {
-  background: rgba(0, 210, 255, 0.2);
-  border-color: #00d2ff;
-  color: #ffffff;
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-  transform: translateY(-2px);
+.welcome-wordmark {
+  font-family: var(--sans);
+  font-size: clamp(2.6rem, 8vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  line-height: 1.1;
 }
-
-@media (max-width: 600px) {
-  #skip-btn {
-    bottom: 24px;
-    right: 20px;
-    padding: 8px 18px;
-    font-size: 11px;
-    letter-spacing: 1.5px;
+.welcome-wordmark > span {
+  color: var(--crimson);
+}
+.welcome-rule {
+  width: 42px;
+  height: 2px;
+  background: var(--crimson);
+  transform-origin: center;
+  animation: welcome-rule 420ms var(--ease) 100ms both;
+}
+.welcome-tagline {
+  color: var(--muted);
+  font-size: clamp(0.8rem, 2.8vw, 0.95rem);
+  letter-spacing: 0.02em;
+}
+@keyframes welcome-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-/* --- MAIN WEBSITE SMOOTH REVEAL --- */
-body.intro-active #main {
-  opacity: 0;
-  transform: translateY(20px);
+@keyframes welcome-rule {
+  from {
+    transform: scaleX(0.35);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
-
-body.loaded #main {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 1.2s ease 0.3s,
-    transform 1.2s ease 0.3s;
+@keyframes welcome-exit {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
 }
-
-/* Standalone main-content styling */
-#main-content {
-  min-height: calc(100svh - 84px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 2rem;
-  background: radial-gradient(circle at center, #0d1638 0%, #050714 75%);
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 1.2s ease 0.3s,
-    transform 1.2s ease 0.3s;
+.brand-welcome-page {
+  padding: clamp(80px, 12vw, 160px) 0;
+  background: var(--paper);
 }
-
-body.loaded #main-content {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.brand-title {
-  font-size: clamp(2rem, 6vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: clamp(2px, 1vw, 6px);
-  background: linear-gradient(90deg, #e0e6ed 0%, #ffffff 45%, #00d2ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
-}
-
-.tagline {
-  font-size: clamp(0.9rem, 2vw, 1.2rem);
-  color: #8fa3c7;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  margin-bottom: 2.5rem;
-}
-
-.cta-button {
-  padding: 14px 36px;
-  background: linear-gradient(135deg, #0066ff 0%, #00d2ff 100%);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  border-radius: 30px;
-  box-shadow: 0 4px 25px rgba(0, 210, 255, 0.35);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-  display: inline-block;
-}
-
-.cta-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 30px rgba(0, 210, 255, 0.6);
+.brand-welcome-page h1 {
+  max-width: 760px;
 }
 
 /* Home hero */
@@ -3694,8 +3614,7 @@ h2 + .process-grid {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
-  .intro,
-  #intro-loader {
+  .site-welcome {
     display: none !important;
   }
   .logo-model-face {

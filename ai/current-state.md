@@ -2,11 +2,13 @@
 
 ## Local audit and frontend update — 27 October 2026
 
+The opening now uses a roughly one-second, silent typographic welcome on a warm paper background, with subtle movement and a crimson rule. It runs once per tab, supports explicit replay, respects reduced motion and expires independently of React hydration. The previous video is no longer requested; the existing welcome URL remains compatible. Browser rendering remains **NOT VERIFIED** here.
+
 The current working tree includes the 26 October safety fixes plus shared frontend refinements across the 31 page routes: consistent cards/controls, responsive header navigation, a mobile admin selector, client workspace tabs, readable legal text, improved contact form presentation, message wrapping, and loading/error states. The marketplace and cart distinguish catalog outages from empty selections; cart prices come from a successful current catalog read and unavailable selections require removal before submission.
 
 Conversation creation now uses one transaction through `start_client_conversation`, reusing existing request/project threads and repairing missing client membership. Both `2026-10-26-request-and-message-safety.sql` and `2026-10-27-conversation-creation.sql` are prepared only: **not applied or database-integration verified**.
 
-79 unit/API tests pass. The isolated production build was verified with external integrations disconnected. Playwright discovers 57 tests in 8 files, including frontend viewport/navigation/outage checks; these are **not executed** because Docker/Chrome remain unavailable. Live integrations and visual/cross-browser behavior remain **NOT VERIFIED**. See `frontend-update-2026-10-27.md`, `audit-2026-10-26.md`, and `../docs/audit-rollout-2026-10-26.md`. Nothing was deployed.
+87 unit/API tests pass, including eight welcome-animation gating/fallback regressions. The isolated production build was verified with external integrations disconnected. Playwright discovers 57 tests in 8 files, including frontend viewport/navigation/outage checks; these are **not executed** because Docker/Chrome remain unavailable. Live integrations and visual/cross-browser behavior remain **NOT VERIFIED**. See `frontend-update-2026-10-27.md`, `audit-2026-10-26.md`, and `../docs/audit-rollout-2026-10-26.md`. Nothing was deployed.
 
 The snapshot below describes the earlier 23 October baseline; its historical test/deployment statements do not verify these new changes.
 

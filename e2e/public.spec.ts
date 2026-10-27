@@ -9,11 +9,13 @@ test("public pages are served from the cache", async ({ request }) => {
   }
 });
 
-test("only the homepage downloads the intro video", async ({ page }) => {
+test("the welcome animation never downloads a video", async ({ page }) => {
   const videos: string[] = [];
   page.on("request", (request) => {
     if (request.url().endsWith(".mp4")) videos.push(new URL(page.url()).pathname);
   });
+  await page.goto("/?intro=1");
+  await page.goto("/opening_animation_video");
   await page.goto("/services");
   await page.goto("/about");
   expect(videos).toEqual([]);

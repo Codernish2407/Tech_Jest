@@ -2,32 +2,31 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "TechJest — Opening Animation",
-  description: "TechJest opening animation video showcase.",
+  title: "Welcome to TechJest",
+  description: "Practical technology for ambitious teams.",
   robots: { index: false, follow: false },
 };
 
 export default function OpeningAnimationPage() {
   return (
-    <div id="main-content">
-      <h1 className="brand-title">TECH JEST</h1>
-      <p className="tagline">Ideas Today &nbsp;|&nbsp; Solutions Tomorrow</p>
-      <Link href="/services" className="cta-button">
-        EXPLORE SOLUTIONS
-      </Link>
-      <a
-        href="/?intro=1"
-        style={{
-          marginTop: "1.5rem",
-          color: "#8fa3c7",
-          fontSize: "13px",
-          letterSpacing: "1px",
-          textTransform: "uppercase",
-          textDecoration: "underline",
-        }}
-      >
-        Replay Intro on Homepage
-      </a>
-    </div>
+    <section className="brand-welcome-page">
+      <div className="container">
+        <div className="eyebrow">Welcome to TechJest</div>
+        <h1>
+          Ideas today.
+          <br />
+          Solutions tomorrow.
+        </h1>
+        <p className="lead">Practical technology for ambitious teams. Built with clarity, shipped with care.</p>
+        <div className="hero-actions">
+          <Link href="/services" className="btn btn-primary">
+            Explore services
+          </Link>
+          <a href="/?intro=1" className="btn btn-ghost">
+            Replay welcome
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
