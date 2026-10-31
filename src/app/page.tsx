@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoModel } from "@/frontend/components/logo-model";
+import { ProjectBlueprint } from "@/frontend/components/project-blueprint";
 import Image from "next/image";
 import { getSiteSettings } from "@/backend/supabase/site-settings";
 import { getServices } from "@/backend/supabase/services";
@@ -9,6 +9,9 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
 import { getSiteUrl } from "@/lib/site-url";
 import { InstagramFeed } from "@/frontend/components/InstagramFeed";
+import { HeroTitle } from "@/frontend/components/hero-title";
+import { ParticleField, ParticleSlot } from "@/frontend/components/particle-field";
+import { Scene3D } from "@/frontend/components/scene-3d";
 
 export const metadata: Metadata = pageMetadata({
   title: "TechJest | Web Development, AI Automation & Digital Solutions",
@@ -119,22 +122,21 @@ export default async function Home() {
           }),
         }}
       />
-      <section className="hero">
-        <div className="container hero-grid">
-          <div>
-            <div className="eyebrow">{settings.homepage_eyebrow}</div>
-            <h1>{settings.homepage_title}</h1>
-            <p className="lead">{settings.homepage_description}</p>
-            <div className="hero-actions">
-              <Link className="btn btn-primary" href="/contact">
-                {settings.homepage_cta}
-              </Link>
-              <Link className="btn btn-ghost" href="/portfolio">
-                See our work
-              </Link>
-            </div>
+      <section className="hero hero-bold">
+        <div className="hero-glow" aria-hidden="true" />
+        <Scene3D variant="home" className="hero-scene" />
+        <div className="container hero-stage">
+          <div className="eyebrow">{settings.homepage_eyebrow}</div>
+          <HeroTitle title={settings.homepage_title} />
+          <p className="lead">{settings.homepage_description}</p>
+          <div className="hero-actions">
+            <Link className="btn btn-primary" href="/contact">
+              {settings.homepage_cta}
+            </Link>
+            <Link className="btn btn-ghost" href="/portfolio">
+              See our work
+            </Link>
           </div>
-          <LogoModel />
         </div>
         <ul className="container hero-assurances" aria-label="Working with TechJest">
           {assurances.map((item) => (
@@ -147,6 +149,7 @@ export default async function Home() {
           <div>
             <div className="eyebrow">TechJest</div>
             <h2>Software development for ambitious businesses.</h2>
+            <ParticleSlot shape="code" className="particle-slot-detail" />
           </div>
           <div>
             <p className="lead">
@@ -163,6 +166,7 @@ export default async function Home() {
                 Meet the founders and leadership team →
               </Link>
             </p>
+            <ProjectBlueprint />
           </div>
         </div>
       </section>
@@ -195,6 +199,7 @@ export default async function Home() {
               <div className="eyebrow">Why TechJest?</div>
               <h2>A delivery process built for confidence.</h2>
             </div>
+            <ParticleSlot shape="gear" className="particle-slot-head" />
             <p className="lead">
               Every project moves through clear stages, from understanding the business to improving the product after
               launch.
@@ -220,60 +225,37 @@ export default async function Home() {
               <div className="eyebrow">Selected work</div>
               <h2>Proof over promises.</h2>
             </div>
+            <ParticleSlot shape="browser" className="particle-slot-head" />
             <Link className="card-link" href="/portfolio">
               View all work
             </Link>
           </div>
-          <div className="project-grid">
-            <article className="project">
+          <article className="work-spotlight">
+            <Link className="work-spotlight-image" href="/portfolio" aria-label="View the Stream Bird India project">
               <Image
-                className="project-image"
                 src="/images/StreamBirdIndia.png"
-                alt="Stream Bird India homepage preview"
+                alt="Stream Bird India company website"
                 width={2940}
                 height={1596}
-                sizes="(max-width: 520px) 100vw, (max-width: 800px) 50vw, 400px"
+                sizes="(max-width: 800px) 100vw, 700px"
               />
-              <div>
-                <div className="project-tag">Web development</div>
-                <h3>Stream Bird India</h3>
-                <p>
-                  A complete technology ecosystem website for a network connectivity and physical IT infrastructure
-                  company.
-                </p>
-              </div>
-              <div>
-                <small>Stream Bird India</small>
-                <p>
-                  <a
-                    className="card-link"
-                    href="https://stream-bird-india.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Visit live website ↗
-                  </a>
-                </p>
-              </div>
-            </article>
-            {[
-              [
-                "Operations dashboard",
-                "Confidential — logistics company",
-                "A clearer view of the work behind every delivery.",
-              ],
-              ["Customer portal", "Confidential — services company", "A simpler way for customers to get things done."],
-            ].map(([title, client, desc]) => (
-              <article className="project" key={title}>
-                <div>
-                  <div className="project-tag">Sample project</div>
-                  <h3>{title}</h3>
-                  <p>{desc}</p>
-                </div>
-                <small>{client}</small>
-              </article>
-            ))}
-          </div>
+            </Link>
+            <div className="work-spotlight-copy">
+              <div className="eyebrow">Featured project</div>
+              <h3>Stream Bird India</h3>
+              <p>
+                A company homepage for a technology ecosystem focused on network connectivity and physical IT
+                infrastructure.
+              </p>
+              <ul className="project-tags" aria-label="Project categories">
+                <li>Web development</li>
+                <li>Company website</li>
+              </ul>
+              <Link className="card-link" href="/portfolio">
+                Explore the project <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </article>
         </div>
       </section>
       <section className="section">
@@ -283,6 +265,7 @@ export default async function Home() {
               <div className="eyebrow">Questions, answered</div>
               <h2>Before we start.</h2>
             </div>
+            <ParticleSlot shape="chat" className="particle-slot-head" />
             <p>
               Open the questions that matter to your project. If you still need an answer,{" "}
               <Link className="card-link" href="/contact">
@@ -316,6 +299,7 @@ export default async function Home() {
         </div>
       </section>
       <InstagramFeed />
+      <ParticleField />
     </>
   );
 }

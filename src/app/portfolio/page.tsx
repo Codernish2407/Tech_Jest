@@ -2,6 +2,8 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
 import { getSiteUrl } from "@/lib/site-url";
+import { Scene3D } from "@/frontend/components/scene-3d";
+import { RiseTitle } from "@/frontend/components/hero-title";
 
 export const metadata: Metadata = pageMetadata({
   title: "Our Work | Stream Bird India Website",
@@ -33,9 +35,10 @@ export default function Portfolio() {
       <section className="page-hero">
         <div className="container">
           <div className="eyebrow">Selected work</div>
-          <h1>Stream Bird India</h1>
+          <RiseTitle text="Stream Bird India" />
           <p className="lead">The Stream Bird India homepage, presented as a live company website project.</p>
         </div>
+        <Scene3D variant="work" className="page-hero-scene" />
       </section>
       <section className="section">
         <div className="container">

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { getSiteSettings } from "@/backend/supabase/site-settings";
+import { Scene3D } from "@/frontend/components/scene-3d";
+import { RiseTitle } from "@/frontend/components/hero-title";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
@@ -16,9 +18,10 @@ export default async function Privacy() {
       <section className="page-hero">
         <div className="container">
           <div className="eyebrow">Legal</div>
-          <h1>Privacy policy</h1>
+          <RiseTitle text="Privacy policy" />
           <p className="lead">What we collect when you use this website, why, and the choices you have.</p>
         </div>
+        <Scene3D variant="emblem" className="page-hero-scene" />
       </section>
       <section className="section">
         <div className="container legal-content">

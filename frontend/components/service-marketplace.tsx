@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { categories, formatPrice, type Service } from "@/frontend/data/services";
 import { ServiceIcon } from "@/frontend/components/icons";
 import { AddToCartButton, CartSummary, getCart } from "@/frontend/components/service-cart";
+import { Scene3D } from "./scene-3d";
+import { RiseTitle } from "./hero-title";
 
 export function ServiceMarketplace({
   services: initialServices,
@@ -69,7 +71,7 @@ export function ServiceMarketplace({
       <section className="marketplace-hero">
         <div className="container">
           <div className="eyebrow">Build your project</div>
-          <h1>Technology services, selected for your next move.</h1>
+          <RiseTitle text="Technology services, selected for your next move." />
           <p className="lead">
             Explore individual services, combine what you need into a project package, and request a clear quote from
             the TechJest team.
@@ -86,6 +88,7 @@ export function ServiceMarketplace({
             />
           </div>
         </div>
+        <Scene3D variant="services" className="page-hero-scene" />
       </section>
       <section className="section marketplace-section">
         <div className="container">

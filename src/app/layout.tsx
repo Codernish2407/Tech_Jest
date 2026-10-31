@@ -6,6 +6,7 @@ import "./globals.css";
 import { MobileMenu } from "@/frontend/components/mobile-menu";
 import { NavLinks } from "@/frontend/components/nav-links";
 import { SiteIntro } from "@/frontend/components/site-intro";
+import { Depth3D } from "@/frontend/components/depth-3d";
 import { introScript } from "@/lib/site-intro";
 import { ChatIcon } from "@/frontend/components/icons";
 import { team, type TeamMember } from "@/frontend/data/team";
@@ -180,6 +181,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema) }} />
         <SiteIntro />
+        <Depth3D />
         <AccountProvider>
           <CartToast />
           <a className="skip" href="#main">

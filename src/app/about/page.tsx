@@ -4,6 +4,8 @@ import Image from "next/image";
 import { getSiteUrl } from "@/lib/site-url";
 import { team } from "@/frontend/data/team";
 import { LinkedInIcon } from "@/frontend/components/icons";
+import { Scene3D } from "@/frontend/components/scene-3d";
+import { RiseTitle } from "@/frontend/components/hero-title";
 
 export const metadata: Metadata = pageMetadata({
   title: "About Us: Founders and Team",
@@ -30,12 +32,13 @@ export default function About() {
       <section className="page-hero">
         <div className="container">
           <div className="eyebrow">About TechJest</div>
-          <h1>Good technology should make work feel lighter.</h1>
+          <RiseTitle text="Good technology should make work feel lighter." />
           <p className="lead">
             TechJest is a software development company led by Founders and CEOs Chayan Khatua and Amit Singh Panwar. We
             build practical digital products for startups and growing businesses.
           </p>
         </div>
+        <Scene3D variant="about" className="page-hero-scene" />
       </section>
       <section className="section">
         <div className="container detail-grid">

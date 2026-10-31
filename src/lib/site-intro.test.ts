@@ -14,7 +14,7 @@ function run(
   } = {},
 ) {
   const dataset: Record<string, string> = {};
-  const stored = new Map<string, string>(options.seen ? [["techjest-welcome-v1", "seen"]] : []);
+  const stored = new Map<string, string>(options.seen ? [["techjest-welcome-v2", "seen"]] : []);
   const timers: { callback: () => void; delay: number }[] = [];
   const removeAttribute = vi.fn(() => {
     delete dataset.intro;
@@ -39,14 +39,15 @@ function run(
   return { dataset, stored, timers, removeAttribute };
 }
 
-describe("brief brand welcome", () => {
+describe("opening animation", () => {
   it("opts in once per tab and expires without React hydration", () => {
     const result = run();
     expect(result.dataset.intro).toBe("play");
-    expect(result.stored.get("techjest-welcome-v1")).toBe("seen");
-    expect(result.timers).toHaveLength(1);
-    expect(result.timers[0]!.delay).toBe(1200);
+    expect(result.stored.get("techjest-welcome-v2")).toBe("seen");
+    expect(result.timers.map((timer) => timer.delay)).toEqual([1600, 2300]);
     result.timers[0]!.callback();
+    expect(result.dataset.intro).toBe("exit");
+    result.timers[1]!.callback();
     expect(result.dataset.intro).toBeUndefined();
   });
   it("skips a repeat visit", () => {
@@ -67,6 +68,12 @@ describe("brief brand welcome", () => {
   it("still expires if session storage is blocked", () => {
     const result = run({ storageBlocked: true });
     expect(result.dataset.intro).toBe("play");
+    result.timers[1]!.callback();
+    expect(result.dataset.intro).toBeUndefined();
+  });
+  it("does not resurrect an intro the visitor already skipped", () => {
+    const result = run();
+    result.removeAttribute();
     result.timers[0]!.callback();
     expect(result.dataset.intro).toBeUndefined();
   });

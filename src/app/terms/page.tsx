@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { getSiteSettings } from "@/backend/supabase/site-settings";
+import { Scene3D } from "@/frontend/components/scene-3d";
+import { RiseTitle } from "@/frontend/components/hero-title";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms of Service",
@@ -16,9 +18,10 @@ export default async function Terms() {
       <section className="page-hero">
         <div className="container">
           <div className="eyebrow">Legal</div>
-          <h1>Terms of service</h1>
+          <RiseTitle text="Terms of service" />
           <p className="lead">The ground rules for using this website and working with TechJest.</p>
         </div>
+        <Scene3D variant="emblem" className="page-hero-scene" />
       </section>
       <section className="section">
         <div className="container legal-content">

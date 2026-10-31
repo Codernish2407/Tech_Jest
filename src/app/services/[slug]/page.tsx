@@ -7,6 +7,21 @@ import { getSiteUrl } from "@/lib/site-url";
 import { jsonLd } from "@/lib/json-ld";
 import { pageMetadata } from "@/lib/page-metadata";
 import { serviceAreas } from "@/frontend/data/service-areas";
+import { Scene3D } from "@/frontend/components/scene-3d";
+import { RiseTitle } from "@/frontend/components/hero-title";
+import type { SceneVariant } from "@/frontend/components/scene-3d-world";
+
+// Each service shows the thing it delivers in its 3D banner, matched on its slug or catalog category.
+function sceneFor(slug: string, category: string | null | undefined): SceneVariant {
+  const key = `${slug} ${category ?? ""}`.toLowerCase();
+  if (/mobile|android|ios|flutter|react-native/.test(key)) return "mobile";
+  if (/(^|[^a-z])ai([^a-z]|$)|machine|ml-|automation|chatbot|agent/.test(key)) return "ai";
+  if (/cloud|devops|hosting|server|deploy/.test(key)) return "cloud";
+  if (/design|ux|brand|figma/.test(key)) return "design";
+  if (/support|maintenance|consult|audit|bug/.test(key)) return "automation";
+  if (/web|site|commerce|landing|seo/.test(key)) return "web";
+  return "emblem";
+}
 
 // Each service page is built on its first visit, then cached; saving in Admin → Services refreshes it.
 export const revalidate = 300;
@@ -195,7 +210,7 @@ export default async function Service({ params }: { params: Promise<{ slug: stri
           <div className="eyebrow">
             <Link href="/services">Services</Link> / {service.title}
           </div>
-          <h1>{service.title}</h1>
+          <RiseTitle text={service.title} />
           <p className="lead">{service.intro}</p>
           {catalogService && (
             <div className="service-detail-price">
@@ -220,6 +235,7 @@ export default async function Service({ params }: { params: Promise<{ slug: stri
             )}
           </div>
         </div>
+        <Scene3D variant={sceneFor(slug, catalogService?.category ?? relatedCategory)} className="page-hero-scene" />
       </section>
       <section className="section">
         <div className="container detail-grid">
