@@ -4,21 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/backend/supabase/client";
 import { documentsBucket } from "@/backend/supabase/documents";
+import { REQUEST_DELETE_WARNING } from "./admin-request-bulk-delete";
 
 const tables = {
   task: "project_tasks",
   document: "project_documents",
   conversation: "conversations",
+  request: "project_requests",
 } as const;
 
 const consequences = {
   task: "",
   document: " The client will no longer be able to download it.",
   conversation: " Every message in it is removed for you and the client. This cannot be undone.",
+  request: `\n\n${REQUEST_DELETE_WARNING}`,
 };
 
-// Removes a project task, a project document together with its stored file, or a
-// client conversation (its messages go with it through the database cascade).
+// Removes a project task, a project document together with its stored file, a client
+// conversation (its messages go with it through the database cascade), or a consultation request.
 export function AdminDeleteButton({
   kind,
   id,

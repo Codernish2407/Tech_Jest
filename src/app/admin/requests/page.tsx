@@ -8,6 +8,8 @@ import { statusOptions } from "@/frontend/data/workflow";
 import { formatDateTime } from "@/lib/format";
 import { pageFromParam, pageRange, searchFromParam } from "@/lib/pagination";
 import { AdminPagination } from "@/frontend/components/admin-pagination";
+import { AdminDeleteButton } from "@/frontend/components/admin-delete-button";
+import { AdminRequestBulkDelete, BULK_FORM } from "@/frontend/components/admin-request-bulk-delete";
 
 export default async function AdminRequestsPage({
   searchParams,
@@ -99,57 +101,69 @@ export default async function AdminRequestsPage({
           <p>Confirm the latest schema and admin RLS policies are applied.</p>
         </div>
       ) : requests?.length ? (
-        <div className="admin-requests">
-          {requests.map((request) => {
-            const profile = profiles.get(request.user_id);
-            const selectedServices = servicesByRequest.get(request.id) ?? [];
-            const clientName = request.name ?? profile?.full_name ?? "Unknown client";
-            const phone = request.phone ?? profile?.phone;
-            return (
-              <article className="admin-request" key={request.id}>
-                <div className="admin-request-top">
-                  <div>
-                    <AdminStatusSelect kind="request" id={request.id} value={request.status} name={request.service} />
-                    <h2>
-                      <Link href={`/admin/requests/${request.id}`}>{request.service}</Link>
-                    </h2>
+        <>
+          <AdminRequestBulkDelete total={requests.length} />
+          <div className="admin-requests">
+            {requests.map((request) => {
+              const profile = profiles.get(request.user_id);
+              const selectedServices = servicesByRequest.get(request.id) ?? [];
+              const clientName = request.name ?? profile?.full_name ?? "Unknown client";
+              const phone = request.phone ?? profile?.phone;
+              return (
+                <article className="admin-request" key={request.id}>
+                  <div className="admin-request-top">
+                    <input
+                      type="checkbox"
+                      className="admin-request-select"
+                      form={BULK_FORM}
+                      name="id"
+                      value={request.id}
+                      aria-label={`Select ${request.service} from ${clientName}`}
+                    />
+                    <div>
+                      <AdminStatusSelect kind="request" id={request.id} value={request.status} name={request.service} />
+                      <h2>
+                        <Link href={`/admin/requests/${request.id}`}>{request.service}</Link>
+                      </h2>
+                    </div>
+                    <time dateTime={request.created_at}>{formatDateTime(request.created_at)}</time>
                   </div>
-                  <time dateTime={request.created_at}>{formatDateTime(request.created_at)}</time>
-                </div>
-                <p className="admin-message">{request.description ?? request.message}</p>
-                {(request.budget_range ?? request.budget) && (
-                  <p>
-                    <strong>Budget:</strong> {request.budget_range ?? request.budget}
-                  </p>
-                )}
-                {request.timeline && (
-                  <p>
-                    <strong>Timeline:</strong> {request.timeline}
-                  </p>
-                )}
-                {selectedServices.length > 0 && (
-                  <p>
-                    <strong>Selected services:</strong> {selectedServices.join(", ")}
-                  </p>
-                )}
-                <div className="admin-customer">
-                  <strong>{clientName}</strong>
-                  {!request.user_id && <span className="admin-status">Guest · reply by email</span>}
-                  {request.email ? (
-                    <EmailLink email={request.email} subject={`Your TechJest enquiry: ${request.service}`} />
-                  ) : (
-                    <span>Email unavailable</span>
+                  <p className="admin-message">{request.description ?? request.message}</p>
+                  {(request.budget_range ?? request.budget) && (
+                    <p>
+                      <strong>Budget:</strong> {request.budget_range ?? request.budget}
+                    </p>
                   )}
-                  <span>{request.company ?? profile?.company ?? "Independent project"}</span>
-                  {phone && <PhoneLinks phone={phone} />}
-                  <Link className="text-link" href={`/admin/requests/${request.id}`}>
-                    Open request →
-                  </Link>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                  {request.timeline && (
+                    <p>
+                      <strong>Timeline:</strong> {request.timeline}
+                    </p>
+                  )}
+                  {selectedServices.length > 0 && (
+                    <p>
+                      <strong>Selected services:</strong> {selectedServices.join(", ")}
+                    </p>
+                  )}
+                  <div className="admin-customer">
+                    <strong>{clientName}</strong>
+                    {!request.user_id && <span className="admin-status">Guest · reply by email</span>}
+                    {request.email ? (
+                      <EmailLink email={request.email} subject={`Your TechJest enquiry: ${request.service}`} />
+                    ) : (
+                      <span>Email unavailable</span>
+                    )}
+                    <span>{request.company ?? profile?.company ?? "Independent project"}</span>
+                    {phone && <PhoneLinks phone={phone} />}
+                    <Link className="text-link" href={`/admin/requests/${request.id}`}>
+                      Open request →
+                    </Link>
+                    <AdminDeleteButton kind="request" id={request.id} name={`${request.service} from ${clientName}`} />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <div className="empty-state">
           <h2>{filtered ? "No requests match." : page > 1 ? "No requests on this page." : "No requests yet."}</h2>
