@@ -89,7 +89,7 @@ What happens after you get in touch:
 1. We read your note to understand what you want to build or improve.
 2. We reply with useful questions to clarify the scope, priorities and next step.
 3. We decide if a call helps: a focused conversation when you need one.
-You do not need an account to send an enquiry. You can also pick services on the Services page, add them to the project cart, and request a quote for that package. People who create an account can follow their requests, proposals, projects and messages in a private dashboard.
+To book a service you need a TechJest account: log in or sign up at ${siteUrl}/auth (it is free). Then either send a request from the contact form, or pick services on the Services page, add them to the project cart, and request a quote for that package. What you type is kept while you log in. Your requests, proposals, projects and messages then appear in your private dashboard. For a quick question without an account, email or message TechJest using the contact details above.
 
 ## Leadership and team
 ${team.map((member) => `- ${member.name}, ${member.role} (LinkedIn: ${member.linkedin})`).join("\n")}

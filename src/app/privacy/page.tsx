@@ -28,8 +28,8 @@ export default async function Privacy() {
           <h2>Information we collect</h2>
           <p>
             When you send a project enquiry, request a quote, or message us, we collect the details you enter: your
-            name, email, phone number, company, budget, timeline, and project description. You do not need an account to
-            send an enquiry. If you create one, we also store your sign-in details and the project history linked to it.
+            name, email, phone number, company, budget, timeline, and project description. Booking a service needs an
+            account, so we also store your sign-in details and the project history linked to it.
           </p>
           <h2>How we use it</h2>
           <p>

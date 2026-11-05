@@ -13,9 +13,6 @@ type Draft = {
   service?: unknown;
   budget?: unknown;
   message?: unknown;
-  name?: unknown;
-  email?: unknown;
-  phone?: unknown;
 };
 
 function readDraft(): Draft {
@@ -27,19 +24,15 @@ function readDraft(): Draft {
   }
 }
 
-// Signed-in clients send requests into their workspace; visitors without an account send a guest
-// enquiry with their name and email, and the team replies by email.
+// Booking a service needs an account. Signed-in clients send requests into their workspace; visitors can
+// fill in the form, and sending it takes them to log in or sign up first, keeping what they typed.
 export function ContactForm() {
   const { account, ready } = useAccount();
   const signedIn = Boolean(account);
   const [service, setService] = useState("");
   const [budget, setBudget] = useState("");
   const [message, setMessage] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [website, setWebsite] = useState("");
-  const [sent, setSent] = useState<"workspace" | "guest" | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -51,14 +44,11 @@ export function ContactForm() {
     else if (typeof draft.service === "string") setService(draft.service);
     if (typeof draft.budget === "string") setBudget(draft.budget);
     if (typeof draft.message === "string") setMessage(draft.message);
-    if (typeof draft.name === "string") setName(draft.name);
-    if (typeof draft.email === "string") setEmail(draft.email);
-    if (typeof draft.phone === "string") setPhone(draft.phone);
   }, []);
 
   function keepDraftAndLogIn() {
     try {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ service, budget, message, name, email, phone }));
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ service, budget, message }));
     } catch {
       // Storage can be unavailable (private mode); logging in still works.
     }
@@ -68,15 +58,17 @@ export function ContactForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    if (!signedIn) {
+      keepDraftAndLogIn();
+      return;
+    }
     setError("");
     setBusy(true);
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          signedIn ? { service, budget, message } : { service, budget, message, name, email, phone, website },
-        ),
+        body: JSON.stringify({ service, budget, message }),
       });
       if (!response.ok) {
         const result = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -88,7 +80,7 @@ export function ContactForm() {
       } catch {
         // Nothing to clean up when storage is unavailable.
       }
-      setSent(signedIn ? "workspace" : "guest");
+      setSent(true);
     } catch {
       setError("We could not connect to TechJest. Please try again.");
     } finally {
@@ -96,13 +88,6 @@ export function ContactForm() {
     }
   }
 
-  if (sent === "guest")
-    return (
-      <div className="band" style={{ padding: 30 }}>
-        <h2>Request sent.</h2>
-        <p>Thank you. We’ll reply to {email} within one business day.</p>
-      </div>
-    );
   if (sent)
     return (
       <div className="band" style={{ padding: 30 }}>
@@ -117,69 +102,19 @@ export function ContactForm() {
   return (
     <form className="form" onSubmit={submit}>
       {ready && !signedIn && (
-        <>
-          <p className="form-note">
-            No account needed: we’ll reply by email. To keep our replies in a private workspace instead,{" "}
-            <a
-              href={loginHref}
-              onClick={(event) => {
-                event.preventDefault();
-                keepDraftAndLogIn();
-              }}
-            >
-              log in or sign up
-            </a>{" "}
-            first. We’ll keep what you’ve typed.
-          </p>
-          <div className="field">
-            <label htmlFor="contact-name">Your name</label>
-            <input
-              id="contact-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-              minLength={2}
-              maxLength={100}
-              autoComplete="name"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="contact-email">Email</label>
-            <input
-              id="contact-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              maxLength={320}
-              autoComplete="email"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="contact-phone">
-              Phone <small>(optional)</small>
-            </label>
-            <input
-              id="contact-phone"
-              type="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              maxLength={30}
-              autoComplete="tel"
-            />
-          </div>
-          {/* Hidden from people and screen readers; only bots fill it in. */}
-          <div className="visually-hidden" aria-hidden="true">
-            <label htmlFor="contact-website">Website</label>
-            <input
-              id="contact-website"
-              tabIndex={-1}
-              autoComplete="off"
-              value={website}
-              onChange={(event) => setWebsite(event.target.value)}
-            />
-          </div>
-        </>
+        <p className="form-note">
+          You need a TechJest account to book a service. Fill in the form, then{" "}
+          <a
+            href={loginHref}
+            onClick={(event) => {
+              event.preventDefault();
+              keepDraftAndLogIn();
+            }}
+          >
+            log in or sign up
+          </a>
+          . We’ll keep what you’ve typed.
+        </p>
       )}
       <div className="field">
         <label htmlFor="service">What can we help with?</label>
@@ -233,7 +168,7 @@ export function ContactForm() {
         </p>
       )}
       <button className="btn btn-primary" type="submit" disabled={busy || !ready}>
-        {busy ? "Sending request…" : signedIn ? "Save project request" : "Send request"}
+        {busy ? "Sending request…" : signedIn || !ready ? "Save project request" : "Log in to send request"}
       </button>
     </form>
   );

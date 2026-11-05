@@ -21,7 +21,14 @@ type ContactBody = {
 
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+// Booking a service needs an account: the request lands in the client's workspace, where the team replies.
+// The contact form and cart send visitors to log in first and keep what they typed.
+const loginRequiredError = "Please log in or create an account to book a service.";
+
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const user = await getSessionUser(supabase);
+  if (!user) return NextResponse.json({ error: loginRequiredError, loginRequired: true }, { status: 401 });
   let body: ContactBody;
   try {
     body = (await request.json()) as ContactBody;
@@ -39,8 +46,6 @@ export async function POST(request: Request) {
       body.serviceSlugs.some((slug) => typeof slug !== "string" || !slug.trim() || slug.length > 160))
   )
     return NextResponse.json({ error: "Select up to 30 valid services." }, { status: 400 });
-  const supabase = await createClient();
-  const user = await getSessionUser(supabase);
   const services = await getServices({ fallbackOnMissingTable: false });
   const requestedSlugs = Array.isArray(body.serviceSlugs)
     ? [
@@ -99,10 +104,8 @@ export async function POST(request: Request) {
     timeline.length > 160
   )
     return NextResponse.json({ error: "Some request details are too long." }, { status: 400 });
-  if ((body.email !== undefined || !user) && !emailPattern.test(email))
+  if (body.email !== undefined && !emailPattern.test(email))
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-  // Visitors without an account must say who they are, so the team can reply by email.
-  if (!user && name.length < 2) return NextResponse.json({ error: "Enter your name." }, { status: 400 });
   const failed = (error: { code?: string; message: string }) => {
     if (error.code === "TJ429")
       return NextResponse.json(
@@ -120,24 +123,8 @@ export async function POST(request: Request) {
   ) =>
     // After the response, so a slow email service never delays the visitor.
     after(() =>
-      sendTeamAlert(requestAlertEmail({ requestId, guest: !user, service, message, budget, timeline, ...details })),
+      sendTeamAlert(requestAlertEmail({ requestId, guest: false, service, message, budget, timeline, ...details })),
     );
-  if (!user) {
-    const { data: requestId, error } = await supabase.rpc("submit_guest_request", {
-      p_name: name,
-      p_email: email,
-      p_message: message,
-      p_phone: phone || null,
-      p_company: company || null,
-      p_service: service,
-      p_budget: budget || null,
-      p_timeline: timeline || null,
-      p_service_slugs: selectedServices.map((item) => item.slug),
-    });
-    if (error) return failed(error);
-    alert(String(requestId), { name, email, phone, company });
-    return NextResponse.json({ ok: true, guest: true });
-  }
   // The contact form sends no contact details, so the profile fills them in for the admin team.
   const { data: profile } = await supabase
     .from("profiles")

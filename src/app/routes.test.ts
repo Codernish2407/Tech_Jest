@@ -168,7 +168,7 @@ describe("/api/conversations", () => {
   });
 });
 
-describe("/api/contact from visitors without an account", () => {
+describe("/api/contact without an account", () => {
   const enquiry = {
     service: "Web Development",
     message: "We need a booking website for our clinic.",
@@ -176,10 +176,27 @@ describe("/api/contact from visitors without an account", () => {
     email: "asha@example.com",
   };
 
+  it("asks the visitor to log in and saves nothing", async () => {
+    const { POST } = await import("./api/contact/route");
+    for (const body of [enquiry, { ...enquiry, serviceSlugs: ["landing-page"] }, null]) {
+      const response = await POST(json(body));
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ loginRequired: true });
+    }
+    expect(state.rpcs).toEqual([]);
+    expect(state.tables).toEqual([]);
+    expect(state.after).toEqual([]);
+  });
+});
+
+describe("/api/contact input checks", () => {
+  const enquiry = { service: "Web Development", message: "We need a booking website for our clinic." };
+
   it.each([null, [], "hello", 42, true].map((body) => ({ body })))(
     "rejects a non-object body ($body)",
     async ({ body }) => {
       const { POST } = await import("./api/contact/route");
+      state.user = client;
       expect((await POST(json(body))).status).toBe(400);
       expect(state.rpcs).toEqual([]);
       expect(state.after).toEqual([]);
@@ -190,48 +207,35 @@ describe("/api/contact from visitors without an account", () => {
     "rejects invalid service selections ($serviceSlugs)",
     async ({ serviceSlugs }) => {
       const { POST } = await import("./api/contact/route");
+      state.user = client;
       expect((await POST(json({ ...enquiry, serviceSlugs }))).status).toBe(400);
       expect(state.rpcs).toEqual([]);
     },
   );
 
-  it("saves a guest enquiry through the guest database function and alerts the team", async () => {
+  it("needs a real email address when one is given", async () => {
     const { POST } = await import("./api/contact/route");
-    const response = await POST(json(enquiry));
-    expect(response.status).toBe(200);
-    expect(state.rpcs).toHaveLength(1);
-    expect(state.rpcs[0]).toMatchObject({
-      name: "submit_guest_request",
-      args: { p_name: "Asha Rao", p_email: "asha@example.com", p_service: "Web Development" },
-    });
-    expect(state.tables).toEqual([]);
-    expect(state.after).toHaveLength(1);
-  });
-
-  it("needs a name and a real email address", async () => {
-    const { POST } = await import("./api/contact/route");
-    expect((await POST(json({ ...enquiry, name: "" }))).status).toBe(400);
+    state.user = client;
     expect((await POST(json({ ...enquiry, email: "asha@" }))).status).toBe(400);
     expect(state.rpcs).toEqual([]);
   });
 
   it("quietly drops submissions that fill the hidden bot field", async () => {
     const { POST } = await import("./api/contact/route");
+    state.user = client;
     const response = await POST(json({ ...enquiry, website: "http://spam.example" }));
     expect(response.status).toBe(200);
     expect(state.rpcs).toEqual([]);
-    expect(state.tables).toEqual([]);
     expect(state.after).toEqual([]);
   });
 
-  it("shows the database's own message for invalid details and 429 for the guest limit", async () => {
+  it("shows the database's own message for invalid details", async () => {
     const { POST } = await import("./api/contact/route");
+    state.user = client;
     state.rpcError = { code: "TJ400", message: "One or more selected services are no longer available." };
     const invalid = await POST(json(enquiry));
     expect(invalid.status).toBe(400);
     expect((await invalid.json()).error).toBe("One or more selected services are no longer available.");
-    state.rpcError = { code: "TJ429", message: "Too many guest requests." };
-    expect((await POST(json(enquiry))).status).toBe(429);
     expect(state.after).toEqual([]);
   });
 });

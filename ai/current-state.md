@@ -2,7 +2,7 @@
 
 ## Website assistant — 6 November 2026
 
-"Ask TechJest" chat: `frontend/components/site-assistant.tsx` → `POST /api/chat` → `backend/assistant/model.ts`, which calls an OpenAI-compatible chat completions API with `fetch` (no SDK). Default: Google Gemini's free tier (`gemini-flash-lite-latest`; `gemini-flash-latest` was too slow on the free tier); `AI_BASE_URL` and `AI_MODEL` switch to another provider such as Groq. It answers only from the website's content: `backend/assistant/prompt.ts` holds the rules, and `backend/assistant/knowledge.ts` builds the knowledge base from the live catalog, site settings, team, `frontend/data/site-content.ts` (homepage copy, moved out of `src/app/page.tsx`) and `serviceAreaDetails` (moved out of `src/app/services/[slug]/page.tsx`). About, Contact, Portfolio, Privacy and Terms text is restated in `knowledge.ts` and must be updated with those pages. Off until `AI_API_KEY` is set (the layout hides the button). Limits: 6 questions per minute and 40 per hour per IP, per server instance; the provider's free quota is shared by all visitors and returns "busy" when used up. Unit-tested with `fetch` mocked, and live-tested locally against Gemini on 6 November 2026; the widget's rendering in a browser is **NOT VERIFIED**.
+"Ask TechJest" chat: `frontend/components/site-assistant.tsx` → `POST /api/chat` → `backend/assistant/model.ts`, which calls an OpenAI-compatible chat completions API with `fetch` (no SDK). Default: Google Gemini's free tier, trying `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, then `gemini-flash-lite-latest` (each free model sometimes returns 503 "high demand"; `gemini-flash-latest` was too slow); `AI_MODEL` takes a comma-separated list; `AI_BASE_URL` and `AI_MODEL` switch to another provider such as Groq. It answers only from the website's content: `backend/assistant/prompt.ts` holds the rules, and `backend/assistant/knowledge.ts` builds the knowledge base from the live catalog, site settings, team, `frontend/data/site-content.ts` (homepage copy, moved out of `src/app/page.tsx`) and `serviceAreaDetails` (moved out of `src/app/services/[slug]/page.tsx`). About, Contact, Portfolio, Privacy and Terms text is restated in `knowledge.ts` and must be updated with those pages. Off until `AI_API_KEY` is set (the layout hides the button). Limits: 6 questions per minute and 40 per hour per IP, per server instance; the provider's free quota is shared by all visitors and returns "busy" when used up. Unit-tested with `fetch` mocked, and live-tested locally against Gemini on 6 November 2026; the widget's rendering in a browser is **NOT VERIFIED**.
 
 ## Local audit and frontend update — 27 October 2026
 
@@ -69,11 +69,12 @@ ai/                   These notes
 
 `POST /api/contact` (contact form and cart):
 
-1. Drops submissions that fill the hidden `website` field (looks successful to bots).
-2. Validates service, message (20–5000 characters), contact fields, and cart service slugs against the catalog.
-3. Signed in: `submit_project_request()` saves the request, its services, a conversation, the first message, and an admin notification in one transaction. A trigger limits each client to 10 requests an hour.
-4. Signed out: `submit_guest_request()` saves a guest request (no account, no conversation) after re-checking every field; names and prices come from the catalog; 3 per email and 50 in total per hour.
-5. After the response, `after()` emails the team (Resend), with Reply-To set to the client.
+1. Booking needs an account (since 6 November 2026): signed-out calls get 401 `loginRequired`. The contact form and cart let visitors fill in the form, then send them to `/auth?next=…` and keep what they typed in `localStorage`.
+2. Drops submissions that fill the hidden `website` field (looks successful to bots).
+3. Validates service, message (20–5000 characters), contact fields, and cart service slugs against the catalog.
+4. `submit_project_request()` saves the request, its services, a conversation, the first message, and an admin notification in one transaction. A trigger limits each client to 10 requests an hour.
+5. The website no longer calls `submit_guest_request()`. The database function still exists and anonymous callers can still execute it through Supabase's API (not revoked; needs a migration). Older guest requests keep their "guest enquiry" labels in the admin console.
+6. After the response, `after()` emails the team (Resend), with Reply-To set to the client.
 
 The cart keeps selected slugs in `localStorage` (`techjest-service-cart`); a half-written quote or contact form is kept while the visitor chooses to log in.
 

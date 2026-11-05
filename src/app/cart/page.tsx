@@ -28,7 +28,7 @@ function readDraft(): Draft {
 export default function CartPage() {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [sent, setSent] = useState(false);
-  const { account } = useAccount();
+  const { account, ready } = useAccount();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
@@ -83,7 +83,7 @@ export default function CartPage() {
       setError("Your browser could not update the cart. Allow site storage and try again.");
     }
   }
-  // Logging in is optional; the quote form is kept so the visitor does not type it again.
+  // Requesting a quote needs an account. The quote form is kept so the visitor does not type it again.
   function keepDraftAndLogIn() {
     const form = document.getElementById("quote");
     if (form instanceof HTMLFormElement) {
@@ -102,6 +102,10 @@ export default function CartPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || catalogState !== "ready" || unavailableSlugs.length || !selected.length) return;
+    if (!account) {
+      keepDraftAndLogIn();
+      return;
+    }
     setError("");
     setBusy(true);
     const form = new FormData(event.currentTarget);
@@ -157,15 +161,10 @@ export default function CartPage() {
           <div className="success-panel">
             <div className="eyebrow">Request received</div>
             <h2>We’ll be in touch.</h2>
-            <p>
-              Your selected services are now with the TechJest team. We’ll reply within one business day
-              {account ? "." : " by email."}
-            </p>
-            {account && (
-              <Link className="btn btn-primary" href="/dashboard">
-                View your project history
-              </Link>
-            )}
+            <p>Your selected services are now with the TechJest team. We’ll reply within one business day.</p>
+            <Link className="btn btn-primary" href="/dashboard">
+              View your project history
+            </Link>
           </div>
         ) : catalogState !== "ready" ? (
           <div className="catalog-notice" role="status">
@@ -342,17 +341,21 @@ export default function CartPage() {
                     placeholder="What are you trying to build or improve?"
                   />
                 </div>
-                <button className="btn btn-primary" type="submit" disabled={busy || unavailableSlugs.length > 0}>
-                  {busy ? "Sending request…" : "Request a quote"}
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={busy || !ready || unavailableSlugs.length > 0}
+                >
+                  {busy ? "Sending request…" : account || !ready ? "Request a quote" : "Log in to request a quote"}
                 </button>
                 {/* Hidden from people and screen readers; only bots fill it in. */}
                 <div className="visually-hidden" aria-hidden="true">
                   <label htmlFor="quote-website">Website</label>
                   <input id="quote-website" name="website" tabIndex={-1} autoComplete="off" />
                 </div>
-                {!account && (
+                {ready && !account && (
                   <small className="form-note">
-                    No account needed: we’ll reply by email. To keep the quote in a private workspace,{" "}
+                    You need a TechJest account to request a quote.{" "}
                     <a
                       href="/auth?next=/cart"
                       onClick={(event) => {
@@ -360,9 +363,9 @@ export default function CartPage() {
                         keepDraftAndLogIn();
                       }}
                     >
-                      log in or sign up
+                      Log in or sign up
                     </a>{" "}
-                    first.
+                    and we’ll keep your cart and what you’ve typed.
                   </small>
                 )}
               </form>

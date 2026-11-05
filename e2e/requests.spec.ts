@@ -9,15 +9,17 @@ async function fillCart(page: Page, slugs: string[]) {
 }
 
 test("a successful quote stays successful when browser storage cleanup fails", async ({ page }) => {
+  const user = await createUser({ prefix: "storage-quote" });
+  await logIn(page, user.email, user.password);
   await fillCart(page, ["landing-page"]);
-  await page.locator("#quote-name").fill("Storage Guest");
+  await page.locator("#quote-name").fill("Storage Client");
   await page.locator("#quote-email").fill("storage@example.test");
   await page.locator("#quote-phone").fill("12345");
   await page.locator("#quote-message").fill("Please build a landing page for our clinic launch.");
   let submissions = 0;
   await page.route("**/api/contact", (route) => {
     submissions += 1;
-    return route.fulfill({ json: { ok: true, guest: true } });
+    return route.fulfill({ json: { ok: true } });
   });
   await page.evaluate(() => {
     Storage.prototype.removeItem = () => {
@@ -59,54 +61,43 @@ test("a signed-in client sends a request into their workspace", async ({ page })
   await expect(page.getByText("We need a booking website for our clinic, with payments.").first()).toBeVisible();
 });
 
-test("a visitor sends an enquiry without an account", async ({ page }) => {
-  const email = uniqueEmail("guest-contact");
+test("a visitor logs in before sending an enquiry and keeps what they typed", async ({ page }) => {
+  const user = await createUser({ prefix: "contact-login" });
   await page.goto("/contact?service=web-development");
   await expect(page.locator("#service")).toHaveValue("Web Development");
-  await page.locator("#contact-name").fill("Contact Guest");
-  await page.locator("#contact-email").fill(email);
+  await expect(page.getByText("You need a TechJest account to book a service.")).toBeVisible();
   await page.locator("#message").fill("We need help rebuilding our company website this quarter.");
-  await page.getByRole("button", { name: "Send request" }).click();
-  await expect(page.getByText(`We’ll reply to ${email}`)).toBeVisible();
+  await page.getByRole("button", { name: "Log in to send request" }).click();
+  await expect(page).toHaveURL(/\/auth\?next=\/contact$/);
 
-  const { data } = await admin.from("project_requests").select("user_id, service").eq("email", email);
-  expect(data).toEqual([{ user_id: null, service: "Web Development" }]);
+  await page.locator("#auth-email").fill(user.email);
+  await page.locator("#auth-password").fill(user.password);
+  await page.getByRole("button", { name: "Log in to workspace" }).click();
+  await expect(page).toHaveURL(/\/contact$/);
+  await expect(page.locator("#service")).toHaveValue("Web Development");
+  await expect(page.locator("#message")).toHaveValue(/^We need help rebuilding/);
+  await page.getByRole("button", { name: "Save project request" }).click();
+  await expect(page.getByRole("heading", { name: "Request saved." })).toBeVisible();
+
+  const { data } = await admin.from("project_requests").select("user_id, service").eq("email", user.email);
+  expect(data).toEqual([{ user_id: user.id, service: "Web Development" }]);
 });
 
-test("a form filled in by a bot looks sent but saves nothing", async ({ page }) => {
-  const email = uniqueEmail("bot");
-  await page.goto("/contact");
-  await page.locator("#service").selectOption("Web Development");
-  await page.locator("#contact-name").fill("Bot");
-  await page.locator("#contact-email").fill(email);
-  await page.locator("#message").fill("Buy cheap things at our website, best prices guaranteed!!");
-  // People never see this field; bots fill every field they find.
-  await page.locator("#contact-website").fill("http://spam.example", { force: true });
-  await page.getByRole("button", { name: "Send request" }).click();
-  await expect(page.getByRole("heading", { name: "Request sent." })).toBeVisible();
+test("visitors without an account cannot send a request, even straight to the API", async ({ page }) => {
+  const email = uniqueEmail("no-account");
+  const response = await page.request.post("/api/contact", {
+    data: {
+      service: "Web Development",
+      message: "We need help rebuilding our company website this quarter.",
+      name: "No Account",
+      email,
+      serviceSlugs: ["landing-page"],
+    },
+  });
+  expect(response.status()).toBe(401);
+  expect(await response.json()).toMatchObject({ loginRequired: true });
   const { data } = await admin.from("project_requests").select("id").eq("email", email);
   expect(data).toEqual([]);
-});
-
-test("a visitor sends a cart quote without an account", async ({ page }) => {
-  const email = uniqueEmail("guest-cart");
-  await fillCart(page, ["landing-page"]);
-  await expect(page.getByText("No account needed")).toBeVisible();
-  await page.locator("#quote-name").fill("Guest Cart");
-  await page.locator("#quote-email").fill(email);
-  await page.locator("#quote-phone").fill("12345");
-  await page.locator("#quote-message").fill("We would like a landing page for our new clinic launch.");
-  await page.getByRole("button", { name: "Request a quote" }).click();
-  await expect(page.getByText("We’ll reply within one business day by email.")).toBeVisible();
-
-  const { data: rows } = await admin.from("project_requests").select("id, user_id").eq("email", email);
-  expect(rows).toHaveLength(1);
-  expect(rows?.[0]?.user_id).toBeNull();
-  const { count } = await admin
-    .from("project_request_services")
-    .select("*", { count: "exact", head: true })
-    .eq("request_id", rows![0]!.id);
-  expect(count).toBe(1);
 });
 
 test("choosing to log in first keeps the cart quote form", async ({ page }) => {
@@ -117,7 +108,8 @@ test("choosing to log in first keeps the cart quote form", async ({ page }) => {
   await page.locator("#quote-phone").fill("12345");
   await page.locator("#quote-timeline").selectOption("1–3 months");
   await page.locator("#quote-message").fill("Long description of the clinic booking project we want to build.");
-  await page.getByRole("link", { name: "log in or sign up" }).click();
+  await expect(page.getByText("You need a TechJest account to request a quote.")).toBeVisible();
+  await page.getByRole("button", { name: "Log in to request a quote" }).click();
   await expect(page).toHaveURL(/\/auth\?next=\/cart$/);
 
   await page.getByRole("button", { name: "New here? Create an account" }).click();
@@ -130,7 +122,7 @@ test("choosing to log in first keeps the cart quote form", async ({ page }) => {
   await expect(page.locator("#quote-name")).toHaveValue("Draft Person");
   await expect(page.locator("#quote-message")).toHaveValue(/^Long description/);
   await expect(page.locator("#quote-timeline")).toHaveValue("1–3 months");
-  await expect(page.getByText("No account needed")).toHaveCount(0);
+  await expect(page.getByText("You need a TechJest account")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Request a quote" }).click();
   await expect(page.getByRole("link", { name: "View your project history" })).toBeVisible();
