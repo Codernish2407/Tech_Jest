@@ -55,14 +55,14 @@ describe("site assistant", () => {
     expect(state.fetch).not.toHaveBeenCalled();
   });
 
-  it("asks Gemini Flash-Lite with the website rules and knowledge base", async () => {
+  it("asks Gemini with the website rules and knowledge base", async () => {
     const response = await ask(question);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ reply: "A Business Website starts at ₹25,000." });
     const { url, headers, body } = sent();
     expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
     expect(headers.Authorization).toBe("Bearer test-key");
-    expect(body.model).toBe("gemini-flash-lite-latest");
+    expect(body.model).toBe("gemini-3.5-flash-lite");
     expect(body.reasoning_effort).toBeUndefined();
     expect(body.messages[0].role).toBe("system");
     expect(body.messages[0].content).toContain("WEBSITE-ONLY KNOWLEDGE");
@@ -74,8 +74,32 @@ describe("site assistant", () => {
 
   it("can use another OpenAI-compatible provider", () => {
     expect(modelConfig({ AI_API_KEY: "k", AI_BASE_URL: "https://api.groq.com/openai/v1/", AI_MODEL: "llama" })).toEqual(
-      { apiKey: "k", baseUrl: "https://api.groq.com/openai/v1", model: "llama", reasoningEffort: "" },
+      { apiKey: "k", baseUrl: "https://api.groq.com/openai/v1", models: ["llama"], reasoningEffort: "" },
     );
+    expect(modelConfig({ AI_API_KEY: "k", AI_MODEL: " a , b ," })?.models).toEqual(["a", "b"]);
+  });
+
+  it("moves on to the next model when one is overloaded or retired", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const failures = [503, 404];
+    state.fetch.mockImplementation(async () => {
+      const status = failures.shift();
+      return status ? new Response(JSON.stringify({ error: "high demand" }), { status }) : completion("Answer");
+    });
+    const response = await ask(question);
+    expect(await response.json()).toEqual({ reply: "Answer" });
+    expect(state.fetch.mock.calls.map(([, init]) => JSON.parse(init.body).model)).toEqual([
+      "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite",
+      "gemini-flash-lite-latest",
+    ]);
+  });
+
+  it("does not retry other models when the key is wrong", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    state.fetch.mockImplementation(async () => new Response(JSON.stringify({ error: "bad key" }), { status: 401 }));
+    expect((await ask(question)).status).toBe(502);
+    expect(state.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("quotes no prices when the live catalog is down", async () => {
@@ -106,12 +130,13 @@ describe("site assistant", () => {
     expect(statuses[6]).toBe(429);
   });
 
-  it("says the assistant is busy when the free quota is used up", async () => {
+  it("says the assistant is busy when every model is out of free quota", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     state.fetch.mockImplementation(async () => new Response(JSON.stringify({ error: "quota" }), { status: 429 }));
     const response = await ask(question);
     expect(response.status).toBe(503);
     expect((await response.json()).error).toContain("busy");
+    expect(state.fetch).toHaveBeenCalledTimes(3);
   });
 
   it("reports a failed model call without leaking details", async () => {
