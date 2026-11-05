@@ -3,7 +3,9 @@ import Link from "next/link";
 import Image from "next/image";
 import "./fonts.css";
 import "./globals.css";
+import "./site-assistant.css";
 import { MobileMenu } from "@/frontend/components/mobile-menu";
+import { SiteAssistant } from "@/frontend/components/site-assistant";
 import { NavLinks } from "@/frontend/components/nav-links";
 import { SiteIntro } from "@/frontend/components/site-intro";
 import { Depth3D } from "@/frontend/components/depth-3d";
@@ -298,6 +300,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               </a>
             </aside>
           )}
+          {/* The website assistant (/api/chat) is off until AI_API_KEY is configured. */}
+          {process.env.AI_API_KEY?.trim() && <SiteAssistant raised={Boolean(whatsappChatHref)} />}
         </AccountProvider>
       </body>
     </html>

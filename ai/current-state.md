@@ -1,5 +1,9 @@
 # Current state snapshot
 
+## Website assistant — 6 November 2026
+
+"Ask TechJest" chat: `frontend/components/site-assistant.tsx` → `POST /api/chat` → `backend/assistant/model.ts`, which calls an OpenAI-compatible chat completions API with `fetch` (no SDK). Default: Google Gemini's free tier (`gemini-flash-lite-latest`; `gemini-flash-latest` was too slow on the free tier); `AI_BASE_URL` and `AI_MODEL` switch to another provider such as Groq. It answers only from the website's content: `backend/assistant/prompt.ts` holds the rules, and `backend/assistant/knowledge.ts` builds the knowledge base from the live catalog, site settings, team, `frontend/data/site-content.ts` (homepage copy, moved out of `src/app/page.tsx`) and `serviceAreaDetails` (moved out of `src/app/services/[slug]/page.tsx`). About, Contact, Portfolio, Privacy and Terms text is restated in `knowledge.ts` and must be updated with those pages. Off until `AI_API_KEY` is set (the layout hides the button). Limits: 6 questions per minute and 40 per hour per IP, per server instance; the provider's free quota is shared by all visitors and returns "busy" when used up. Unit-tested with `fetch` mocked, and live-tested locally against Gemini on 6 November 2026; the widget's rendering in a browser is **NOT VERIFIED**.
+
 ## Local audit and frontend update — 27 October 2026
 
 The opening now uses a roughly one-second, silent typographic welcome on a warm paper background, with subtle movement and a crimson rule. It runs once per tab, supports explicit replay, respects reduced motion and expires independently of React hydration. The previous video is no longer requested; the existing welcome URL remains compatible. Browser rendering remains **NOT VERIFIED** here.

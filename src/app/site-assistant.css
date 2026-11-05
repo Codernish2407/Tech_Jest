@@ -1,0 +1,213 @@
+/* "Ask TechJest" chat (frontend/components/site-assistant.tsx). Sits above the WhatsApp button when
+   that one is shown (.assistant-raised); both share the bottom-right corner. */
+.assistant {
+  --assistant-bottom: 22px;
+  --assistant-right: 22px;
+}
+.assistant-raised {
+  --assistant-bottom: 88px;
+}
+.assistant-launcher {
+  position: fixed;
+  right: var(--assistant-right);
+  bottom: var(--assistant-bottom);
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 12px 28px -10px rgba(27, 30, 74, 0.7);
+  transition:
+    transform 0.2s var(--ease),
+    background-color 0.2s;
+}
+.assistant-launcher:hover {
+  background: var(--navy-raised);
+  transform: translateY(-2px);
+}
+.assistant-launcher:focus-visible {
+  outline: 3px solid var(--crimson);
+  outline-offset: 3px;
+}
+.assistant-launcher svg {
+  width: 24px;
+  height: 24px;
+}
+.assistant-panel {
+  position: fixed;
+  right: var(--assistant-right);
+  bottom: calc(var(--assistant-bottom) + 66px);
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 32px));
+  height: min(560px, calc(100dvh - var(--assistant-bottom) - 96px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.assistant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--navy);
+  color: #fff;
+}
+.assistant-head strong {
+  display: block;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+.assistant-head span {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--stone-light);
+}
+.assistant-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--navy-line);
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.assistant-close:hover {
+  background: var(--navy-raised);
+}
+.assistant-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--navy-wash);
+}
+.assistant-msg {
+  max-width: 88%;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: var(--radius-small);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.assistant-msg-bot {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.assistant-msg-bot a {
+  color: var(--crimson-deep);
+  text-decoration: underline;
+}
+.assistant-msg-user {
+  align-self: flex-end;
+  background: var(--navy);
+  color: #fff;
+}
+.assistant-typing {
+  color: var(--muted);
+  font-style: italic;
+}
+.assistant-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.assistant-suggestions button {
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.assistant-suggestions button:hover {
+  border-color: var(--navy);
+}
+.assistant-error {
+  margin: 0;
+  padding: 8px 16px;
+  background: var(--danger-wash);
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+.assistant-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px 12px 6px;
+  border-top: 1px solid var(--line);
+}
+.assistant-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--field);
+  border-radius: var(--radius-small);
+  background: #fff;
+  color: var(--ink);
+  /* 16px keeps iOS Safari from zooming in when the field gets focus. */
+  font: inherit;
+  font-size: 1rem;
+}
+.assistant-form .btn {
+  padding: 11px 16px;
+}
+.assistant-form .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.assistant-note {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+@media (max-width: 520px) {
+  .assistant {
+    --assistant-bottom: 18px;
+    --assistant-right: 16px;
+  }
+  .assistant-raised {
+    --assistant-bottom: 80px;
+  }
+  .assistant-launcher {
+    width: 50px;
+    height: 50px;
+  }
+  .assistant-panel {
+    right: 16px;
+    left: 16px;
+    width: auto;
+    bottom: calc(var(--assistant-bottom) + 60px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-launcher {
+    transition: none;
+  }
+  .assistant-launcher:hover {
+    transform: none;
+  }
+}
